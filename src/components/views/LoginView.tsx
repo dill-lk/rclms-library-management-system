@@ -158,7 +158,7 @@ export const LoginView: React.FC = () => {
       </div>
 
       {/* Main sign-in workspace */}
-      <div className="w-full max-w-5xl mx-auto flex-1 py-8 lg:py-12 grid min-w-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] gap-8 items-center">
+      <div className="w-full max-w-5xl mx-auto flex-1 py-8 lg:py-12 grid min-w-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] gap-8 items-start">
         <div className="relative isolate hidden min-h-[34rem] h-full flex-col justify-between overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-[#eef2ff] via-white to-[#ecfeff] p-9 text-slate-900 shadow-card lg:flex xl:p-10">
           <div aria-hidden="true" className="absolute -right-24 -top-24 h-80 w-80 rounded-full border-[34px] border-indigo-300/30" />
           <div aria-hidden="true" className="absolute -bottom-28 -left-20 h-72 w-72 rounded-full border-[28px] border-cyan-300/25" />
@@ -190,7 +190,7 @@ export const LoginView: React.FC = () => {
           </div>
         </div>
 
-      <div className="w-full min-w-0 max-w-md lg:max-w-none mx-auto bg-white border border-slate-200 rounded-3xl shadow-card p-6 sm:p-8 space-y-6 self-center">
+      <div className="w-full min-w-0 max-w-md lg:max-w-none mx-auto bg-white border border-slate-200 rounded-3xl shadow-card p-6 sm:p-8 space-y-6 self-start">
         {/* Header Branding */}
         <div className="text-center space-y-3">
           <div className="w-20 h-20 mx-auto rounded-2xl bg-neutral-50 border border-neutral-200 flex items-center justify-center p-2">
@@ -282,7 +282,7 @@ export const LoginView: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   required
                   autoComplete="current-password"
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs placeholder:text-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
