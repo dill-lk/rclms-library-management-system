@@ -68,15 +68,15 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
       case 'book_details':
         return { title: 'Book Profile', desc: 'Metadata, shelf location, and copy inventory' };
       case 'zebra_printer':
-        return { title: 'Print labels · Beta', desc: 'Batch print barcodes with shelf assignment' };
+        return { title: 'Print labels', desc: 'Batch print barcodes with shelf assignment' };
       case 'members':
         return { title: 'Members Directory', desc: 'Student, faculty, and staff profiles' };
       case 'member_profile':
         return { title: 'Member Profile', desc: 'Active loans, history, and fines ledger' };
       case 'borrow':
-        return { title: 'Issue a book · Beta', desc: 'Scan-first checkout with a recent-action undo' };
+        return { title: 'Issue a book', desc: 'Scan-first checkout with a recent-action undo' };
       case 'returns':
-        return { title: 'Return a book · Beta', desc: 'Scan-first check-in with a recent-action undo' };
+        return { title: 'Return a book', desc: 'Scan-first check-in with a recent-action undo' };
       case 'reservations':
         return { title: 'Reservations', desc: 'Hold queue and pickup allocation' };
       case 'fines':

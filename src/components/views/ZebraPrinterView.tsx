@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
-import { BetaBadge } from '../common/BetaBadge';
 import { Barcode } from '../common/Barcode';
 import { Book, LabelQueueItem } from '../../types';
 import { checkZebraBrowserPrintStatus, sendZplToZebraBrowserPrint, ZebraPrinterDevice } from '../../utils/zebraService';
@@ -364,7 +363,7 @@ export const ZebraPrinterView: React.FC = () => {
           </div>
 
           <h1 className="flex items-center gap-2 text-2xl lg:text-3xl font-extrabold tracking-tight">
-            Print Book Labels <BetaBadge />
+            Print Book Labels
           </h1>
           <p className="text-neutral-400 text-xs sm:text-sm max-w-2xl">
             Add a book, review the preview, and print its library label.

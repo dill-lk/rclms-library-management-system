@@ -83,7 +83,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           id: 'zebra_printer',
           label: 'Print labels',
           icon: Printer,
-          beta: true,
           badge: labelQueue.length > 0 ? `${labelQueue.length % 3 === 0 ? '3/3' : `${labelQueue.length % 3}/3`}` : undefined,
           badgeColor:
             labelQueue.length % 3 === 0 && labelQueue.length > 0
@@ -100,8 +99,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       title: 'Circulation',
       items: [
         { id: 'reminders', label: 'Due & overdue reminders', icon: BellRing, beta: true, badge: reminderCount > 0 ? reminderCount : undefined, badgeColor: overdueCount > 0 ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' },
-        { id: 'borrow', label: 'Issue a book', icon: BookMarked, beta: true },
-        { id: 'returns', label: 'Return a book', icon: ArrowRightLeft, beta: true },
+        { id: 'borrow', label: 'Issue a book', icon: BookMarked },
+        { id: 'returns', label: 'Return a book', icon: ArrowRightLeft },
         {
           id: 'reservations',
           label: 'Reservations',

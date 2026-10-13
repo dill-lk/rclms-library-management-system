@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { getEffectiveBorrowLimit } from '../../utils/loanLimits';
 import { Search, UserRound, BookOpen, CalendarDays, Check, AlertCircle, ArrowRight, RotateCcw } from 'lucide-react';
-import { BetaBadge } from '../common/BetaBadge';
 
 export const BorrowView: React.FC = () => {
   const { members, books, issueBook, settings, setPrintData, addToast, lastCirculationAction, undoLastCirculationAction } = useLibrary();
@@ -81,7 +80,7 @@ export const BorrowView: React.FC = () => {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-500">Library desk / New loan</p>
-            <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-white">Issue a book <BetaBadge /></h1>
+            <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-white">Issue a book</h1>
             <p className="mt-1 text-sm text-neutral-400">Select a reader, scan one physical copy, then confirm the return date.</p>
           </div>
           <div className="flex items-center gap-2 text-xs text-neutral-400"><span className="h-2 w-2 rounded-full bg-white" /> Ready for checkout</div>

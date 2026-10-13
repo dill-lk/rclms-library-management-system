@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { Search, BookOpen, UserRound, Check, AlertTriangle, CalendarDays, Receipt, X, RotateCcw } from 'lucide-react';
-import { BetaBadge } from '../common/BetaBadge';
 
 export const ReturnsView: React.FC = () => {
   const { circulation, returnBook, settings, setPrintData, addToast, lastCirculationAction, undoLastCirculationAction } = useLibrary();
@@ -51,7 +50,7 @@ export const ReturnsView: React.FC = () => {
   return (
     <form onSubmit={handleReturn} className="min-h-full space-y-5 text-neutral-100">
       <header className="rounded-2xl border border-neutral-800 bg-[#111113] p-5 sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-500">Circulation / Check-in</p><h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-white">Return a book <BetaBadge /></h1><p className="mt-1 text-sm text-neutral-400">Scan the copy, check its condition, and close the loan.</p></div><div className="rounded-full border border-neutral-700 px-3 py-1.5 text-xs text-neutral-400">{activeLoans.length} open {activeLoans.length === 1 ? 'loan' : 'loans'}</div></div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-500">Circulation / Check-in</p><h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-white">Return a book</h1><p className="mt-1 text-sm text-neutral-400">Scan the copy, check its condition, and close the loan.</p></div><div className="rounded-full border border-neutral-700 px-3 py-1.5 text-xs text-neutral-400">{activeLoans.length} open {activeLoans.length === 1 ? 'loan' : 'loans'}</div></div>
         <div className="mt-6 grid grid-cols-3 gap-2 text-[11px] font-semibold"><div className="border-t border-white pt-3 text-white">01 · Find loan</div><div className={`border-t pt-3 ${selectedRecord ? 'border-white text-white' : 'border-neutral-700 text-neutral-500'}`}>02 · Check copy</div><div className={`border-t pt-3 ${selectedRecord ? 'border-white text-white' : 'border-neutral-700 text-neutral-500'}`}>03 · Complete</div></div>
       </header>
 
