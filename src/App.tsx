@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { useLibrary } from './context/LibraryContext';
-import { heartbeatCurrentDeviceSession } from './utils/deviceSessions';
+import { heartbeatCurrentDeviceSession, registerCurrentDeviceSession } from './utils/deviceSessions';
 import { Header } from './components/common/Header';
 import { Sidebar } from './components/common/Sidebar';
 import { ToastContainer } from './components/common/ToastContainer';
@@ -40,10 +40,16 @@ export const AppContent: React.FC = () => {
     if (!isLoggedIn) return;
     let mounted = true;
     let checking = false;
+    let registeredDevice = false;
     const checkSession = async () => {
       if (checking) return;
       checking = true;
       try {
+        if (!registeredDevice) {
+          const registration = await registerCurrentDeviceSession();
+          if (!mounted) return;
+          registeredDevice = registration.status === 'active';
+        }
         const { status } = await heartbeatCurrentDeviceSession();
         if (!mounted || !status || status === 'active' || status === 'untracked' || status === 'unavailable') return;
         const reason = status === 'paused'
