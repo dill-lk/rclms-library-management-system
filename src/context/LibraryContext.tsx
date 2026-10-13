@@ -643,35 +643,8 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
             permissions: permissionsForRole(role),
           };
 
-          if (role === 'student' || role === 'teacher') {
-            const { data: existingMember, error: memberLookupError } = await supabase
-              .from('members')
-              .select('id')
-              .eq('user_id', authData.user.id)
-              .limit(1)
-              .maybeSingle();
-            if (memberLookupError) return { success: false, message: `Could not verify your library member record: ${memberLookupError.message}` };
-
-            if (!existingMember) {
-              const memberSuffix = authData.user.id.replace(/-/g, '').slice(0, 10).toUpperCase();
-              const { error: memberCreateError } = await supabase.from('members').insert({
-                user_id: authData.user.id,
-                member_id: `RC-${role.toUpperCase().slice(0, 3)}-${new Date().getFullYear()}-${memberSuffix}`,
-                admission_no: profile.admission_no || `RC-${role.toUpperCase().slice(0, 3)}-${memberSuffix}`,
-                name: profile.full_name || authedUser.name,
-                type: role,
-                grade: profile.grade || null,
-                department: profile.department || null,
-                email: cleanEmail,
-                phone: profile.phone || null,
-                max_borrow_limit: role === 'teacher' ? 7 : Math.max(1, Number(settings.maxStudentBooks) || 1),
-              });
-              if (memberCreateError) {
-                return { success: false, message: `Your account is verified, but its library member record could not be created: ${memberCreateError.message}` };
-              }
-            }
-          }
-
+          // Reader sign-in is profile-based. Official Members rows are created only by staff;
+          // an authenticated reader can sign in even when no membership record exists.
           const deviceSession = await registerCurrentDeviceSession();
           if (deviceSession.error || deviceSession.status !== 'active') {
             await supabase.auth.signOut({ scope: 'local' });
