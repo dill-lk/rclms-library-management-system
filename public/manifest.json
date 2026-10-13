@@ -1,0 +1,22 @@
+{
+  "short_name": "Rahula LMS",
+  "name": "Rahula College Library Management System",
+  "description": "Official Library Management System for Rahula College, Matara",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/logo.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#14171F",
+  "theme_color": "#8B0000",
+  "display": "standalone",
+  "orientation": "portrait"
+}

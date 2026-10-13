@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.vercel/
+.DS_Store
+*.log
+uploads/
+RCLMS_REBUILD_NOTES.md
+RCLMS_TODO_LIST.md

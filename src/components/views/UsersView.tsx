@@ -1,0 +1,299 @@
+import React, { useState } from 'react';
+import { useLibrary } from '../../context/LibraryContext';
+import { StatusBadge } from '../common/StatusBadge';
+import { Modal } from '../common/Modal';
+import { UserAccount, UserRole } from '../../types';
+import { libraryPermissions, permissionsForRole, roleLabels, rolePermissions } from '../../utils/roles';
+import {
+  ShieldAlert,
+  Search,
+  Plus,
+  ShieldCheck,
+  Check,
+  X,
+  User,
+  Key,
+  Lock,
+  Sparkles
+} from 'lucide-react';
+
+export const UsersView: React.FC = () => {
+  const { users, addUser, updateUserRole, currentUser, addToast, isSupabaseConfigured } = useLibrary();
+
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [userRole, setUserRole] = useState<UserRole>('assistant_librarian');
+  const [userDesignation, setUserDesignation] = useState('');
+
+  const handleCreateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userName.trim() || !userEmail.trim()) return;
+
+    if (isSupabaseConfigured) {
+      addToast({ type: 'warning', title: 'Auth invitation required', message: 'Create or invite this person in Supabase Auth first. Then refresh this page to manage their role safely.' });
+      setIsAddUserModalOpen(false);
+      return;
+    }
+
+    addUser({
+      name: userName,
+      email: userEmail,
+      role: userRole,
+      designation: userDesignation || 'Library Staff',
+      lastLogin: 'Never',
+      status: 'active',
+      permissions: permissionsForRole(userRole),
+    });
+
+    setIsAddUserModalOpen(false);
+    setUserName('');
+    setUserEmail('');
+    setUserDesignation('');
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Top Banner Header */}
+      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold font-heading text-gray-900 dark:text-white flex items-center gap-2">
+            <ShieldAlert className="w-5 h-5 text-maroon-800 dark:text-gold-400" />
+            <span>Accounts and access</span>
+          </h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Access role determines the account’s permission category; designation or department is descriptive only.
+          </p>
+        </div>
+
+        <button
+          onClick={() => setIsAddUserModalOpen(true)}
+          className="px-4 py-2 text-xs font-bold text-white bg-maroon-800 hover:bg-maroon-900 rounded-xl shadow-card transition flex items-center gap-1.5 self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add staff member</span>
+        </button>
+      </div>
+
+      {/* Users Table */}
+      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
+        <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
+          <h3 className="text-sm font-bold font-heading text-gray-900 dark:text-white">
+            User accounts ({users.length})
+          </h3>
+          <span className="text-xs text-gray-400 font-mono">Staff list</span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-gray-50 dark:bg-slate-800/80 text-gray-500 dark:text-gray-400 font-semibold border-b border-gray-100 dark:border-slate-800">
+              <tr>
+                <th className="py-3 px-4">User Name</th>
+                <th className="py-3 px-3">Email Address</th>
+                <th className="py-3 px-3">Access role</th>
+                <th className="py-3 px-3">Designation / department</th>
+                <th className="py-3 px-3">Last Active</th>
+                <th className="py-3 px-3">Status</th>
+                <th className="py-3 px-4 text-right">Change role</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-800 text-gray-800 dark:text-gray-200">
+              {users.map((u) => (
+                <tr key={u.id} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/40 transition">
+                  <td className="py-3 px-4 font-bold">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-7 h-7 rounded-full bg-maroon-800 text-gold-300 font-bold flex items-center justify-center text-xs flex-shrink-0">
+                        {u.name[0]}
+                      </div>
+                      <span className="truncate">{u.name}</span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-3 text-gray-500 dark:text-gray-400">{u.email}</td>
+                  <td className="py-3 px-3">
+                    <span className="capitalize font-semibold text-maroon-800 dark:text-gold-400 font-mono text-[11px]">
+                      {roleLabels[u.role]}
+                    </span>
+                  </td>
+                  <td className="py-3 px-3 text-gray-600 dark:text-gray-300 truncate max-w-xs">
+                    {u.designation}
+                  </td>
+                  <td className="py-3 px-3 text-gray-400 font-mono text-[11px]">{u.lastLogin}</td>
+                  <td className="py-3 px-3">
+                    <StatusBadge status={u.status} size="sm" />
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <select
+                      value={u.role}
+                      onChange={(e) => updateUserRole(u.id, e.target.value as UserRole)}
+                      className="text-xs py-1 px-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-gray-800 dark:text-gray-200"
+                    >
+                      <option value="super_admin">Super Admin</option>
+                      <option value="librarian">Librarian</option>
+                      <option value="assistant_librarian">Assistant Librarian</option>
+                      <option value="teacher">Teacher</option>
+                      <option value="student">Student</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Permissions Matrix */}
+      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
+        <div>
+          <h3 className="text-base font-bold font-heading text-gray-900 dark:text-white flex items-center gap-2">
+            <Key className="w-4 h-4 text-gold-500" />
+            <span>What each role can do</span>
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            A quick overview of access for each type of user. A check means the role can use that area.
+          </p>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border border-gray-200 dark:border-slate-700 rounded-xl">
+            <thead className="bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-gray-300 font-bold border-b border-gray-200 dark:border-slate-700">
+              <tr>
+                <th className="py-2.5 px-4">Permission Module</th>
+                <th className="py-2.5 px-3 text-center">Super Admin</th>
+                <th className="py-2.5 px-3 text-center">Chief Librarian</th>
+                <th className="py-2.5 px-3 text-center">Asst. Librarian</th>
+                <th className="py-2.5 px-3 text-center">Teacher</th>
+                <th className="py-2.5 px-3 text-center">Student</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-800 text-gray-800 dark:text-gray-200">
+              {libraryPermissions.map((perm) => (
+                <tr key={perm.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/40">
+                  <td className="py-2.5 px-4 font-medium">{perm.label}</td>
+                  <td className="py-2.5 px-3 text-center">
+                    <Check className="w-4 h-4 text-white mx-auto" />
+                  </td>
+                  <td className="py-2.5 px-3 text-center">
+                    <Check className="w-4 h-4 text-white mx-auto" />
+                  </td>
+                  <td className="py-2.5 px-3 text-center">
+                    {rolePermissions.assistant_librarian.includes(perm.id) ? (
+                      <Check className="w-4 h-4 text-white mx-auto" />
+                    ) : (
+                      <X className="w-4 h-4 text-neutral-600 mx-auto" />
+                    )}
+                  </td>
+                  <td className="py-2.5 px-3 text-center">
+                    {rolePermissions.teacher.includes(perm.id) ? (
+                      <Check className="w-4 h-4 text-white mx-auto" />
+                    ) : (
+                      <X className="w-4 h-4 text-neutral-600 mx-auto" />
+                    )}
+                  </td>
+                  <td className="py-2.5 px-3 text-center">
+                    {rolePermissions.student.includes(perm.id) ? (
+                      <Check className="w-4 h-4 text-white mx-auto" />
+                    ) : (
+                      <X className="w-4 h-4 text-neutral-600 mx-auto" />
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Add User Modal */}
+      <Modal
+        isOpen={isAddUserModalOpen}
+        onClose={() => setIsAddUserModalOpen(false)}
+        title="Add staff member"
+        subtitle="Set the staff member’s role and access."
+        size="md"
+      >
+        {isSupabaseConfigured && (
+          <div className="mb-4 rounded-xl border border-neutral-700 bg-neutral-900 p-3 text-xs leading-relaxed text-neutral-400">
+            Staff sign-in accounts must first be created or invited in Supabase Auth. After that, refresh this page to assign the library role. This form will not create a fake browser-only account.
+          </div>
+        )}
+        <form onSubmit={handleCreateUser} className="space-y-4 text-xs">
+          <div>
+            <label className="block font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">
+              Full Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder="e.g. Mr. Kithsiri Perera"
+              className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">
+              Email Address <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              required
+              value={userEmail}
+              onChange={(e) => setUserEmail(e.target.value)}
+              placeholder="kithsiri.p@rahulacollege.lk"
+              className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">
+                Role
+              </label>
+              <select
+                value={userRole}
+                onChange={(e) => setUserRole(e.target.value as UserRole)}
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white"
+              >
+                <option value="super_admin">Super Admin</option>
+                <option value="librarian">Chief Librarian</option>
+                <option value="assistant_librarian">Assistant Librarian</option>
+                <option value="teacher">Teacher</option>
+                <option value="student">Student</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">
+                Designation
+              </label>
+              <input
+                type="text"
+                value={userDesignation}
+                onChange={(e) => setUserDesignation(e.target.value)}
+                placeholder="Assistant Librarian"
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white"
+              />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-100 dark:border-slate-800 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsAddUserModalOpen(false)}
+              className="px-4 py-2 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 rounded-xl"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 font-bold text-white bg-maroon-800 hover:bg-maroon-900 rounded-xl shadow-card transition"
+            >
+              Add staff member
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  );
+};
