@@ -6,7 +6,6 @@ import { AddCopyModal } from './AddCopyModal';
 import { CatalogueImportModal } from './CatalogueImportModal';
 import { DuplicateReviewModal } from './DuplicateReviewModal';
 import { PermanentlyDeleteArchivedBookModal } from './PermanentlyDeleteArchivedBookModal';
-import { getCatalogueMetrics } from '../../utils/catalogueMetrics';
 import {
   Search,
   Filter,
@@ -28,6 +27,7 @@ import {
   Archive,
   RotateCcw,
   Copy,
+  MoreHorizontal,
 } from 'lucide-react';
 
 interface BooksViewProps {
@@ -68,7 +68,6 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
   const isStaff = currentUser.role === 'super_admin' || currentUser.role === 'librarian' || currentUser.role === 'assistant_librarian';
   const canManageDuplicates = currentUser.permissions.includes('delete_books');
   const itemsPerPage = 8;
-  const catalogueMetrics = useMemo(() => getCatalogueMetrics(books), [books]);
 
   // Sync if catalogFilter changes
   useEffect(() => {
@@ -165,89 +164,72 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-neutral-200 shadow-xs">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold font-heading text-neutral-900">
-              {showArchived ? 'Archived Records' : 'Books Collection'}
-            </h2>
-            {!showArchived && <span className="text-xs bg-indigo-50 text-indigo-800 font-bold px-2.5 py-1 rounded-full border border-indigo-100">
-              {catalogueMetrics.activeTitles} active titles · {catalogueMetrics.activePhysicalCopies} active copies
-            </span>}
-          </div>
-          <p className="text-xs text-neutral-500 mt-0.5">
-            {showArchived
-              ? 'Restore an archived record, or permanently delete it here without archiving it again.'
-              : `${catalogueMetrics.totalPhysicalCopies} physical copies recorded in total · ${catalogueMetrics.archivedTitles} archived titles hold ${catalogueMetrics.archivedPhysicalCopies} copies.`}
+          <h2 className="text-xl font-bold font-heading text-neutral-900">
+            {showArchived ? 'Archived books' : 'Books Collection'}
+          </h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            {showArchived ? 'Set-aside titles can be restored from here.' : 'Browse the collection and find what you’re looking for.'}
           </p>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          {canManageDuplicates && (
-            <button
-              onClick={() => setShowDuplicateReview(true)}
-              className="px-3 py-2 text-xs font-bold text-maroon-800 bg-maroon-50 hover:bg-maroon-100 border border-maroon-200 rounded-xl transition flex items-center gap-1.5 dark:text-gold-300 dark:bg-maroon-950 dark:border-maroon-800"
-            >
-              <Copy className="w-3.5 h-3.5" />
-              <span>Review duplicates</span>
-            </button>
-          )}
-          <button
-            onClick={() => { setShowArchived((value) => !value); setCurrentPage(1); }}
-            className={`px-3 py-2 text-xs font-semibold border rounded-xl transition flex items-center gap-1.5 ${showArchived ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800' : 'text-neutral-700 bg-neutral-50 hover:bg-neutral-100 border-neutral-200 dark:text-neutral-300 dark:bg-neutral-900 dark:border-neutral-700'}`}
-          >
-            {showArchived ? <RotateCcw className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
-            <span>{showArchived ? 'Active catalogue' : `Archived (${books.filter((book) => book.isArchived).length})`}</span>
-          </button>
-
-          <button
-            onClick={async () => {
-              setIsRefreshing(true);
-              await refreshAllData();
-              setIsRefreshing(false);
-              addToast({ type: 'info', title: 'Catalog Refreshed', message: 'Loaded latest collection records.' });
-            }}
-            className="p-2 text-xs font-semibold text-neutral-700 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl transition"
-            title="Refresh Catalog Data"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
-
-          <button
-            onClick={() => setActiveTab('zebra_printer')}
-            className="px-3 py-2 text-xs font-bold text-neutral-600 bg-neutral-600/10 hover:bg-neutral-600/20 border border-neutral-600/30 rounded-xl transition flex items-center gap-1.5"
-            title="Open Thermal Label Printer Studio"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Print labels</span>
-          </button>
-
-          <button
-            onClick={handleExportCSV}
-            className="px-3 py-2 text-xs font-semibold text-neutral-700 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl transition flex items-center gap-1.5"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-neutral-700" />
-            <span className="hidden sm:inline">Export CSV</span>
-          </button>
-
-          {isStaff && (
-            <button
-              onClick={() => setIsImportModalOpen(true)}
-              className="px-3 py-2 text-xs font-semibold text-neutral-700 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl transition flex items-center gap-1.5"
-            >
-              <Upload className="w-3.5 h-3.5 text-neutral-700" />
-              <span>Import CSV</span>
-            </button>
-          )}
-
+        {/* Keep the everyday action visible; group less-used tools together. */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           {isStaff && (
             <button
               onClick={onAddBook}
-              className="px-4 py-2 text-xs font-bold text-white bg-maroon-700 hover:bg-maroon-800 rounded-xl shadow-sm transition flex items-center gap-1.5"
+              className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-library-action px-4 text-sm font-bold text-library-actionInk shadow-sm transition hover:bg-white"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
               <span>Add New Book</span>
             </button>
           )}
+
+          <details className="catalogue-tools relative">
+            <summary aria-label="More catalogue actions" className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100">
+              <MoreHorizontal className="h-4 w-4" />
+              <span>More</span>
+            </summary>
+            <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-52 overflow-hidden rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl">
+              <button type="button" role="menuitem" disabled={isRefreshing} onClick={async (event) => {
+                event.currentTarget.closest('details')?.removeAttribute('open');
+                setIsRefreshing(true);
+                try {
+                  await refreshAllData();
+                  addToast({ type: 'info', title: 'Catalog Refreshed', message: 'Loaded the latest collection records.' });
+                } finally {
+                  setIsRefreshing(false);
+                }
+              }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-700 transition hover:bg-neutral-100 disabled:opacity-50">
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>{isRefreshing ? 'Refreshing…' : 'Refresh catalogue'}</span>
+              </button>
+              <button type="button" role="menuitem" onClick={(event) => { event.currentTarget.closest('details')?.removeAttribute('open'); setActiveTab('zebra_printer'); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-700 transition hover:bg-neutral-100">
+                <Printer className="h-4 w-4" />
+                <span>Print labels</span>
+              </button>
+              <button type="button" role="menuitem" onClick={(event) => { event.currentTarget.closest('details')?.removeAttribute('open'); handleExportCSV(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-700 transition hover:bg-neutral-100">
+                <FileSpreadsheet className="h-4 w-4" />
+                <span>Export CSV</span>
+              </button>
+              {isStaff && (
+                <button type="button" role="menuitem" onClick={(event) => { event.currentTarget.closest('details')?.removeAttribute('open'); setIsImportModalOpen(true); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-700 transition hover:bg-neutral-100">
+                  <Upload className="h-4 w-4" />
+                  <span>Import CSV</span>
+                </button>
+              )}
+              {canManageDuplicates && (
+                <button type="button" role="menuitem" onClick={(event) => { event.currentTarget.closest('details')?.removeAttribute('open'); setShowDuplicateReview(true); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-700 transition hover:bg-neutral-100">
+                  <Copy className="h-4 w-4" />
+                  <span>Review duplicates</span>
+                </button>
+              )}
+              <div className="my-1 border-t border-neutral-200" />
+              <button type="button" role="menuitem" onClick={(event) => { event.currentTarget.closest('details')?.removeAttribute('open'); setShowArchived((value) => !value); setCurrentPage(1); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-700 transition hover:bg-neutral-100">
+                {showArchived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                <span>{showArchived ? 'Back to books' : 'Archived books'}</span>
+              </button>
+            </div>
+          </details>
         </div>
       </div>
 

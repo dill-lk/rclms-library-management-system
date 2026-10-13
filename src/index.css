@@ -13,8 +13,8 @@
   --border-color: #2B2922;
   --alert-text: #A8A29E;
   --pure-white: #FFFFFF;
-  --font-headings: 'Merriweather', 'Georgia', serif;
-  --font-body: 'Inter', 'Calibri', sans-serif;
+  --font-headings: 'Lora', 'Georgia', serif;
+  --font-body: 'DM Sans', 'Calibri', sans-serif;
   --font-codes: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
@@ -161,8 +161,8 @@ svg { flex-shrink: 0; }
 .login-topbar .text-neutral-500 { color: var(--text-muted) !important; }
 .login-layout { max-width: 1180px !important; grid-template-columns: minmax(0,1.1fr) minmax(0,.88fr) !important; gap: clamp(2rem,5vw,5rem) !important; padding-top: clamp(2rem,5vh,4rem) !important; padding-bottom: clamp(2rem,5vh,4rem) !important; }
 .login-hero {
-  min-height: 37rem !important;
-  border-radius: 2rem !important;
+  min-height: 30rem !important;
+  border-radius: 1.5rem !important;
   border-color: var(--border-color) !important;
   background: linear-gradient(145deg, #141311 0%, #0B0A08 68%, #141311 160%) !important;
   color: var(--text-main) !important;
@@ -189,7 +189,7 @@ svg { flex-shrink: 0; }
   position: relative;
   overflow: hidden;
   border: 1px solid var(--border-color) !important;
-  border-radius: 2rem !important;
+  border-radius: 1.5rem !important;
   background: var(--bg-secondary) !important;
   color: var(--text-main) !important;
   padding: clamp(1.5rem,3vw,2.5rem) !important;
@@ -233,7 +233,7 @@ svg { flex-shrink: 0; }
 
 @media (max-width: 1023px) {
   .login-layout { grid-template-columns: minmax(0,1fr) minmax(0,.9fr) !important; gap: 1.5rem !important; }
-  .login-hero { min-height: 34rem !important; padding: 2rem !important; }
+  .login-hero { min-height: 28rem !important; padding: 2rem !important; }
 }
 @media (max-width: 767px) {
   .login-topbar { padding-inline: 1rem !important; }
@@ -389,3 +389,79 @@ svg { flex-shrink: 0; }
 .login-page [class*="border-cyan-"],
 .login-page [class*="border-amber-"],
 .login-page [class*="border-red-"] { border-color: var(--border-color) !important; }
+
+/* Normalize legacy gradients and colored focus rings to the approved palette. */
+.app-shell [class*="from-"],
+.login-page [class*="from-"] {
+  --tw-gradient-from: var(--border-color) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgba(43,41,34,0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+.app-shell [class*="via-"],
+.login-page [class*="via-"] {
+  --tw-gradient-to: rgba(20,19,17,0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--bg-secondary) var(--tw-gradient-via-position), var(--tw-gradient-to) !important;
+}
+.app-shell [class*="to-"],
+.login-page [class*="to-"] { --tw-gradient-to: var(--bg-primary) var(--tw-gradient-to-position) !important; }
+.app-shell [class*="ring-blue-"],
+.app-shell [class*="ring-indigo-"],
+.app-shell [class*="ring-cyan-"],
+.app-shell [class*="ring-sky-"],
+.app-shell [class*="ring-purple-"],
+.app-shell [class*="ring-violet-"],
+.app-shell [class*="ring-rose-"],
+.app-shell [class*="ring-red-"],
+.app-shell [class*="ring-emerald-"],
+.app-shell [class*="ring-green-"],
+.app-shell [class*="ring-amber-"],
+.login-page [class*="ring-blue-"],
+.login-page [class*="ring-indigo-"],
+.login-page [class*="ring-cyan-"],
+.login-page [class*="ring-sky-"],
+.login-page [class*="ring-purple-"],
+.login-page [class*="ring-violet-"],
+.login-page [class*="ring-rose-"],
+.login-page [class*="ring-red-"],
+.login-page [class*="ring-emerald-"],
+.login-page [class*="ring-green-"],
+.login-page [class*="ring-amber-"] { --tw-ring-color: rgba(231,229,228,.32) !important; }
+.login-page [class*="bg-blue-"],
+.login-page [class*="bg-indigo-"],
+.login-page [class*="bg-sky-"],
+.login-page [class*="bg-purple-"],
+.login-page [class*="bg-violet-"] { background-color: rgba(168,162,158,.1) !important; }
+.login-page [class*="text-blue-"],
+.login-page [class*="text-indigo-"],
+.login-page [class*="text-sky-"],
+.login-page [class*="text-purple-"],
+.login-page [class*="text-violet-"] { color: var(--text-muted) !important; }
+.login-page [class*="border-blue-"],
+.login-page [class*="border-indigo-"],
+.login-page [class*="border-sky-"],
+.login-page [class*="border-purple-"],
+.login-page [class*="border-violet-"] { border-color: var(--border-color) !important; }
+
+/* A tighter, comfortable sign-in card on 9:16 phone screens. */
+@media (max-width: 767px) {
+  .login-page { min-height: 100svh !important; padding: .75rem !important; }
+  .login-topbar { padding-top: .25rem !important; padding-bottom: .25rem !important; }
+  .login-layout { gap: .75rem !important; padding-top: .5rem !important; padding-bottom: .5rem !important; }
+  .login-card { padding: 1.125rem !important; border-radius: 1.25rem !important; }
+  .login-card > * + * { margin-top: 1rem !important; }
+  .login-card-header > div:first-child { width: 3.5rem !important; height: 3.5rem !important; padding: .375rem !important; }
+  .login-card-header img { width: 2rem !important; height: 2.5rem !important; }
+  .login-card-header h1 { font-size: 1.125rem !important; }
+  .login-card form > * + * { margin-top: .75rem !important; }
+  .login-card input, .login-card select, .login-card textarea { min-height: 2.6rem; }
+  .login-card button[type="submit"] { min-height: 2.75rem; padding-block: .65rem !important; }
+  .login-footer { padding-block: .5rem !important; }
+}
+@media (max-width: 767px) and (max-height: 720px) {
+  .login-page { padding: .5rem !important; }
+  .login-layout { padding-top: .25rem !important; padding-bottom: .25rem !important; }
+  .login-card { padding: .9rem !important; }
+  .login-card > * + * { margin-top: .75rem !important; }
+  .login-card-header > div:first-child { width: 3rem !important; height: 3rem !important; }
+  .login-card form > * + * { margin-top: .6rem !important; }
+}

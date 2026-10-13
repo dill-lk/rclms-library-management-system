@@ -33,9 +33,9 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'Calibri', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        body: ['Inter', 'Calibri', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        heading: ['Merriweather', 'Georgia', 'serif'],
+        sans: ['DM Sans', 'Calibri', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        body: ['DM Sans', 'Calibri', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        heading: ['Lora', 'Georgia', 'serif'],
         sinhala: ['"Noto Sans Sinhala"', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', '"Fira Code"', 'ui-monospace', 'monospace'],
         codes: ['"JetBrains Mono"', '"Fira Code"', 'ui-monospace', 'monospace'],
