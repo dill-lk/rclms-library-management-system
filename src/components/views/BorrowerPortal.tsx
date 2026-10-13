@@ -1,16 +1,20 @@
-import React, { useMemo, useState } from 'react';
-import { ArrowRight, BookOpen, GraduationCap, LogOut, Search, UserRound, X } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowRight, BookOpen, GraduationCap, LogOut, Save, Search, UserRound, X } from 'lucide-react';
 import type { Book } from '../../types';
 import { useLibrary } from '../../context/LibraryContext';
 import { ToastContainer } from '../common/ToastContainer';
+import { SiteAttribution } from '../common/SiteAttribution';
 
 type PortalSection = 'home' | 'catalogue' | 'account';
 
 export const BorrowerPortal: React.FC = () => {
-  const { books, currentUser, logout } = useLibrary();
+  const { books, currentUser, logout, updateOwnProfile } = useLibrary();
   const [section, setSection] = useState<PortalSection>('home');
   const [query, setQuery] = useState('');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [accountName, setAccountName] = useState(currentUser.name);
+  const [accountPhone, setAccountPhone] = useState(currentUser.phone || '');
+  const [savingAccount, setSavingAccount] = useState(false);
   const isTeacher = currentUser.role === 'teacher';
   const catalogue = useMemo(() => books.filter((book) => !book.isArchived), [books]);
   const featured = useMemo(
@@ -29,6 +33,25 @@ export const BorrowerPortal: React.FC = () => {
       return !search || details.includes(search);
     });
   }, [catalogue, query]);
+
+  useEffect(() => {
+    setAccountName(currentUser.name);
+    setAccountPhone(currentUser.phone || '');
+  }, [currentUser.id, currentUser.name, currentUser.phone]);
+
+  const handleSaveAccount = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSavingAccount(true);
+    try {
+      const result = await updateOwnProfile({ name: accountName, phone: accountPhone });
+      if (result.success && result.user) {
+        setAccountName(result.user.name);
+        setAccountPhone(result.user.phone || '');
+      }
+    } finally {
+      setSavingAccount(false);
+    }
+  };
 
   const navigate = (next: PortalSection) => {
     setSection(next);
@@ -139,21 +162,36 @@ export const BorrowerPortal: React.FC = () => {
                   <span className="mt-1 inline-flex rounded-full bg-[#f6e9df] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#6e1731]">{isTeacher ? 'Teacher' : 'Student'}</span>
                 </div>
               </div>
-              <dl className="mt-5 grid gap-5 sm:grid-cols-2">
-                <AccountField label="Email address" value={currentUser.email} />
-                <AccountField label={isTeacher ? 'Staff ID' : 'Admission number'} value={currentUser.admissionNo || 'Not provided'} />
-                {!isTeacher && <AccountField label="Grade" value={currentUser.grade || 'Not provided'} />}
-                {isTeacher && <AccountField label="Department" value={currentUser.designation || 'Teacher'} />}
-                <AccountField label="Access" value="Reader portal" />
-              </dl>
-              <p className="mt-6 rounded-2xl bg-[#f7f4ef] p-4 text-xs leading-5 text-slate-600">This reader portal is separate from library management. For changes to your account details, please contact the library staff.</p>
+              <form onSubmit={handleSaveAccount} className="mt-6 space-y-4">
+                <label className="block">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Full name</span>
+                  <input type="text" required maxLength={120} value={accountName} onChange={(event) => setAccountName(event.target.value)} className="mt-1 w-full rounded-xl border border-[#e7d9c9] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#7d1d39] focus:ring-4 focus:ring-[#7d1d39]/10" />
+                </label>
+                <label className="block">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Phone number</span>
+                  <input type="tel" maxLength={40} value={accountPhone} onChange={(event) => setAccountPhone(event.target.value)} placeholder="Add a contact number" className="mt-1 w-full rounded-xl border border-[#e7d9c9] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#7d1d39] focus:ring-4 focus:ring-[#7d1d39]/10" />
+                </label>
+                <dl className="grid gap-5 border-t border-slate-100 pt-4 sm:grid-cols-2">
+                  <AccountField label="Sign-in email" value={currentUser.email} />
+                  <AccountField label={isTeacher ? 'Staff ID' : 'Admission number'} value={currentUser.admissionNo || 'Not provided'} />
+                  {!isTeacher && <AccountField label="Grade" value={currentUser.grade || 'Not provided'} />}
+                  {isTeacher && <AccountField label="Department" value={currentUser.designation || 'Teacher'} />}
+                  <AccountField label="Access" value="Reader portal" />
+                </dl>
+                <button type="submit" disabled={savingAccount} className="inline-flex items-center gap-2 rounded-xl bg-[#6e1731] px-4 py-3 text-xs font-bold text-white transition hover:bg-[#511125] disabled:cursor-not-allowed disabled:opacity-60">
+                  <Save className="h-4 w-4" /> {savingAccount ? 'Saving…' : 'Save details'}
+                </button>
+              </form>
+              <p className="mt-5 rounded-2xl bg-[#f7f4ef] p-4 text-xs leading-5 text-slate-600">Your reader login is separate from the official Members Directory. Editing these details does not create or change a library membership record. Your sign-in email, role, and school identifiers are managed separately.</p>
             </div>
           </section>
         )}
       </main>
 
       <footer className="mt-8 border-t border-[#eadfd2] bg-white px-4 py-5 text-center text-[11px] text-slate-500">
-        Rahula College Library · Matara, Sri Lanka
+        <span>Rahula College Library · Matara, Sri Lanka</span>
+        <span className="mx-2 text-slate-300" aria-hidden="true">·</span>
+        <SiteAttribution className="text-slate-400 hover:text-slate-600" />
       </footer>
 
       {selectedBook && <BookDetailsModal book={selectedBook} onClose={() => setSelectedBook(null)} />}

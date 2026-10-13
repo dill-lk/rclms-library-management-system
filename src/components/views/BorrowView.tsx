@@ -2,9 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { getEffectiveBorrowLimit } from '../../utils/loanLimits';
 import { Search, UserRound, BookOpen, CalendarDays, Check, AlertCircle, ArrowRight, RotateCcw } from 'lucide-react';
+import { BetaBadge } from '../common/BetaBadge';
 
 export const BorrowView: React.FC = () => {
-  const { members, books, issueBook, settings, setPrintData, addToast } = useLibrary();
+  const { members, books, issueBook, settings, setPrintData, addToast, lastCirculationAction, undoLastCirculationAction } = useLibrary();
   const [memberSearch, setMemberSearch] = useState('');
   const [bookSearch, setBookSearch] = useState('');
   const [selectedMember, setSelectedMember] = useState<any>(null);
@@ -36,16 +37,23 @@ export const BorrowView: React.FC = () => {
     setSelectedMember(member); setMemberSearch('');
     setCustomDays(member.type === 'teacher' ? settings.defaultTeacherLoanDays : settings.defaultStudentLoanDays);
   };
-  const chooseBook = (book: any) => {
+  const chooseBook = (book: any, scannedBarcode?: string) => {
     setSelectedBook(book); setBookSearch('');
-    setSelectedCopyBarcode(book.copies.find((c: any) => c.status === 'available')?.barcode || '');
+    setSelectedCopyBarcode(scannedBarcode || book.copies.find((c: any) => c.status === 'available')?.barcode || '');
   };
   const handleBookSearch = (value: string) => {
     setBookSearch(value);
     const q = value.trim().toLowerCase();
     if (!q) return;
-    const exact = books.find((b) => !b.isArchived && (b.isbn.toLowerCase() === q || b.copies.some((c: any) => c.barcode.toLowerCase() === q)));
-    if (exact) chooseBook(exact);
+    const exactCopyBook = books.find((b) => !b.isArchived && b.copies.some((copy: any) => copy.barcode.toLowerCase() === q));
+    if (exactCopyBook) {
+      const exactCopy = exactCopyBook.copies.find((copy: any) => copy.barcode.toLowerCase() === q);
+      if (exactCopy?.status === 'available') chooseBook(exactCopyBook, exactCopy.barcode);
+      else { chooseBook(exactCopyBook); addToast({ type: 'warning', title: 'Scanned copy unavailable', message: `${exactCopy?.barcode || q} is not currently available.` }); }
+      return;
+    }
+    const exactIsbn = books.find((b) => !b.isArchived && b.isbn.toLowerCase() === q);
+    if (exactIsbn) chooseBook(exactIsbn);
   };
 
   const handleIssue = async (event: React.FormEvent) => {
@@ -62,13 +70,18 @@ export const BorrowView: React.FC = () => {
     }
   };
 
+  const handleUndo = async () => {
+    const result = await undoLastCirculationAction();
+    if (result.success) { setSelectedMember(null); setSelectedBook(null); setSelectedCopyBarcode(''); }
+  };
+
   return (
     <form onSubmit={handleIssue} className="min-h-full space-y-5 text-neutral-100">
       <header className="rounded-2xl border border-neutral-800 bg-[#111113] p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-500">Library desk / New loan</p>
-            <h1 className="text-2xl font-semibold tracking-tight text-white">Issue a book</h1>
+            <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-white">Issue a book <BetaBadge /></h1>
             <p className="mt-1 text-sm text-neutral-400">Select a reader, scan one physical copy, then confirm the return date.</p>
           </div>
           <div className="flex items-center gap-2 text-xs text-neutral-400"><span className="h-2 w-2 rounded-full bg-white" /> Ready for checkout</div>
@@ -79,6 +92,8 @@ export const BorrowView: React.FC = () => {
           ))}
         </div>
       </header>
+
+      {lastCirculationAction?.type === 'issue' && Date.now() - lastCirculationAction.createdAt <= 5 * 60 * 1000 && <div className="flex flex-col gap-3 rounded-xl border border-amber-800/60 bg-amber-950/25 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-semibold text-white">Recent issue: {lastCirculationAction.record.bookTitle}</p><p className="mt-1 text-xs text-neutral-400">Undo is available for five minutes and only for the staff member who made the issue.</p></div><button type="button" onClick={handleUndo} className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-neutral-600 px-3 text-xs font-bold text-white hover:bg-neutral-800"><RotateCcw className="h-3.5 w-3.5" />Undo last issue</button></div>}
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_360px]">
         <div className="space-y-5">

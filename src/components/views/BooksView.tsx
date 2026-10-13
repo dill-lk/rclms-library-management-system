@@ -153,13 +153,7 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
   };
 
   const handlePrintBookLabels = (book: Book) => {
-    const copies = book.copies.length > 0
-      ? book.copies
-      : Array.from({ length: book.totalCopies }, (_, index) => ({
-          barcode: index === 0 ? book.isbn : `${book.isbn}-${index + 1}`,
-          copyNumber: index + 1,
-          shelfLocation: book.shelfLocation,
-        }));
+    const copies = book.copies;
 
     if (copies.length === 0) {
       addToast({ type: 'warning', title: 'No copies to print', message: `“${book.title}” has no physical copies registered.` });
@@ -169,6 +163,7 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
     const queuedBarcodes = new Set(labelQueue.map((item) => item.barcode.trim().toUpperCase()));
     const labels = copies.reduce<Array<{
       bookId: string;
+      copyId: string;
       title: string;
       barcode: string;
       shelfLocation: string;
@@ -181,6 +176,7 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
       queuedBarcodes.add(normalizedBarcode);
       result.push({
         bookId: book.id,
+        copyId: copy.copyId,
         title: book.title,
         barcode,
         shelfLocation: copy.shelfLocation || book.shelfLocation,

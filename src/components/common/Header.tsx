@@ -68,15 +68,15 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
       case 'book_details':
         return { title: 'Book Profile', desc: 'Metadata, shelf location, and copy inventory' };
       case 'zebra_printer':
-        return { title: 'Print labels', desc: 'Prepare and print book labels' };
+        return { title: 'Print labels · Beta', desc: 'Batch print barcodes with shelf assignment' };
       case 'members':
         return { title: 'Members Directory', desc: 'Student, faculty, and staff profiles' };
       case 'member_profile':
         return { title: 'Member Profile', desc: 'Active loans, history, and fines ledger' };
       case 'borrow':
-        return { title: 'Issue a book', desc: 'Record a new loan' };
+        return { title: 'Issue a book · Beta', desc: 'Scan-first checkout with a recent-action undo' };
       case 'returns':
-        return { title: 'Return a book', desc: 'Record a book coming back' };
+        return { title: 'Return a book · Beta', desc: 'Scan-first check-in with a recent-action undo' };
       case 'reservations':
         return { title: 'Reservations', desc: 'Hold queue and pickup allocation' };
       case 'fines':
@@ -88,7 +88,11 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
       case 'publishers':
         return { title: 'Publishers', desc: 'Procurement suppliers and contacts' };
       case 'inventory':
-        return { title: 'Stock Audit', desc: 'Database-backed physical-copy verification (Beta)' };
+        return { title: 'Stock Audit · Beta', desc: 'Verify physical copies by barcode' };
+      case 'reminders':
+        return { title: 'Due & overdue reminders · Beta', desc: 'Review open loans that need follow-up' };
+      case 'data_safety':
+        return { title: 'Backups & audit log · Beta', desc: 'Download a verified backup and review staff activity' };
       case 'reports':
         return { title: 'Analytics & Reports', desc: 'Circulation metrics and data exports' };
       case 'notifications':

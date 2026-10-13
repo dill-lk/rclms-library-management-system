@@ -13,6 +13,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useLibrary } from '../../context/LibraryContext';
+import { SiteAttribution } from '../common/SiteAttribution';
 import type { UserRole } from '../../types';
 
 interface BorrowerLoginViewProps {
@@ -264,7 +265,7 @@ export const BorrowerLoginView: React.FC<BorrowerLoginViewProps> = ({ onBackToPo
           </section>
         </div>
 
-        <footer className="text-center text-xs text-slate-500">Rahula College Library Management System · Matara, Sri Lanka</footer>
+        <footer className="flex flex-col items-center gap-1 text-center text-xs text-slate-500"><span>Rahula College Library Management System · Matara, Sri Lanka</span><SiteAttribution /></footer>
       </div>
     </main>
   );

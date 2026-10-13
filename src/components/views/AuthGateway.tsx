@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowRight, BookOpen, GraduationCap, ShieldCheck } from 'lucide-react';
 import { LoginView } from './LoginView';
 import { BorrowerLoginView } from './BorrowerLoginView';
+import { SiteAttribution } from '../common/SiteAttribution';
 
 type Portal = 'borrower' | 'staff';
 
@@ -85,8 +86,9 @@ export const AuthGateway: React.FC = () => {
           </div>
         </section>
 
-        <footer className="text-center text-xs text-slate-500">
-          Rahula College Library Management System · Matara, Sri Lanka
+        <footer className="flex flex-col items-center gap-1 text-center text-xs text-slate-500">
+          <span>Rahula College Library Management System · Matara, Sri Lanka</span>
+          <SiteAttribution />
         </footer>
       </div>
     </main>

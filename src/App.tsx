@@ -4,6 +4,7 @@ import { heartbeatCurrentDeviceSession, registerCurrentDeviceSession } from './u
 import { Header } from './components/common/Header';
 import { Sidebar } from './components/common/Sidebar';
 import { ToastContainer } from './components/common/ToastContainer';
+import { SiteAttribution } from './components/common/SiteAttribution';
 import type { Book } from './types';
 
 const CommandPalette = lazy(() => import('./components/common/CommandPalette').then(({ CommandPalette }) => ({ default: CommandPalette })));
@@ -25,6 +26,8 @@ const CategoriesView = lazy(() => import('./components/views/CategoriesView').th
 const AuthorsView = lazy(() => import('./components/views/AuthorsView').then(({ AuthorsView }) => ({ default: AuthorsView })));
 const PublishersView = lazy(() => import('./components/views/PublishersView').then(({ PublishersView }) => ({ default: PublishersView })));
 const InventoryView = lazy(() => import('./components/views/InventoryView').then(({ InventoryView }) => ({ default: InventoryView })));
+const RemindersView = lazy(() => import('./components/views/RemindersView').then(({ RemindersView }) => ({ default: RemindersView })));
+const DataSafetyView = lazy(() => import('./components/views/DataSafetyView').then(({ DataSafetyView }) => ({ default: DataSafetyView })));
 const ZebraPrinterView = lazy(() => import('./components/views/ZebraPrinterView').then(({ ZebraPrinterView }) => ({ default: ZebraPrinterView })));
 const ReportsView = lazy(() => import('./components/views/ReportsView').then(({ ReportsView }) => ({ default: ReportsView })));
 const NotificationsView = lazy(() => import('./components/views/NotificationsView').then(({ NotificationsView }) => ({ default: NotificationsView })));
@@ -146,6 +149,10 @@ export const AppContent: React.FC = () => {
         return <PublishersView />;
       case 'inventory':
         return <InventoryView />;
+      case 'reminders':
+        return <RemindersView />;
+      case 'data_safety':
+        return <DataSafetyView />;
       case 'reports':
         return <ReportsView />;
       case 'recommendations':
@@ -192,6 +199,8 @@ export const AppContent: React.FC = () => {
             </span>
             <span className="text-[11px] font-mono text-neutral-400 flex items-center gap-1.5">
               <span>Library operations workspace</span>
+              <span aria-hidden="true">·</span>
+              <SiteAttribution />
             </span>
           </div>
         </footer>

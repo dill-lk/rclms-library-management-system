@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
+import { SiteAttribution } from '../common/SiteAttribution';
 import { UserRole } from '../../types';
 import {
   Eye,
@@ -567,6 +568,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onBackToPortals }) => {
       {/* Institutional Footer */}
       <div className="login-footer text-center py-4 text-xs text-neutral-500 space-y-1">
         <p>Rahula College Library Management System • Matara, Sri Lanka</p>
+        <SiteAttribution />
       </div>
 
     </div>

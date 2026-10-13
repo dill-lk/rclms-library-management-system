@@ -2,7 +2,7 @@ export type UserRole = 'super_admin' | 'librarian' | 'assistant_librarian' | 'te
 
 export type BookStatus = 'available' | 'borrowed' | 'reserved' | 'lost' | 'damaged' | 'in_repair';
 
-export type CirculationStatus = 'active' | 'returned' | 'overdue' | 'renewed';
+export type CirculationStatus = 'active' | 'returned' | 'overdue' | 'renewed' | 'cancelled';
 
 export type ReservationStatus = 'pending' | 'ready' | 'completed' | 'cancelled';
 
@@ -253,7 +253,8 @@ export interface SystemSettings {
 
 export interface LabelQueueItem {
   id: string;
-  bookId?: string;
+  bookId: string;
+  copyId: string;
   title: string;
   barcode: string;
   shelfLocation: string;
@@ -278,6 +279,8 @@ export type ActiveNavTab =
   | 'authors'
   | 'publishers'
   | 'inventory'
+  | 'reminders'
+  | 'data_safety'
   | 'reports'
   | 'recommendations'
   | 'notifications'

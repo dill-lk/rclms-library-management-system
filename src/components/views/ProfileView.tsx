@@ -11,14 +11,15 @@ import {
 } from 'lucide-react';
 
 export const ProfileView: React.FC = () => {
-  const { currentUser, addToast, logout, setActiveTab } = useLibrary();
+  const { currentUser, addToast, logout, setActiveTab, updateOwnProfile } = useLibrary();
 
   const [currentPass, setCurrentPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
 
   const [fullName, setFullName] = useState(currentUser.name);
-  const [email, setEmail] = useState(currentUser.email);
+  const [phone, setPhone] = useState(currentUser.phone || '');
+  const [savingProfile, setSavingProfile] = useState(false);
 
   const handleUpdatePassword = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,13 +41,18 @@ export const ProfileView: React.FC = () => {
     setConfirmPass('');
   };
 
-  const handleUpdateInfo = (e: React.FormEvent) => {
+  const handleUpdateInfo = async (e: React.FormEvent) => {
     e.preventDefault();
-    addToast({
-      type: 'success',
-      title: 'Profile Updated',
-      message: 'Personal details updated in directory.',
-    });
+    setSavingProfile(true);
+    try {
+      const result = await updateOwnProfile({ name: fullName, phone });
+      if (result.success && result.user) {
+        setFullName(result.user.name);
+        setPhone(result.user.phone || '');
+      }
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   return (
@@ -120,8 +126,21 @@ export const ProfileView: React.FC = () => {
               </label>
               <input
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={currentUser.email}
+                readOnly
+                className="w-full px-3 py-2 bg-gray-100 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-600 dark:text-gray-400"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                maxLength={40}
+                onChange={(e) => setPhone(e.target.value)}
                 className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white"
               />
             </div>
@@ -140,11 +159,13 @@ export const ProfileView: React.FC = () => {
 
             <button
               type="submit"
+              disabled={savingProfile}
               className="px-4 py-2 font-bold text-white bg-maroon-800 hover:bg-maroon-900 rounded-xl shadow-card transition flex items-center gap-1.5"
             >
               <Save className="w-4 h-4" />
-              <span>Save Profile</span>
+              <span>{savingProfile ? 'Saving…' : 'Save Profile'}</span>
             </button>
+            <p className="text-[11px] leading-5 text-gray-500 dark:text-gray-400">Your sign-in email, role, and permissions are managed separately and cannot be changed here.</p>
           </form>
         </div>
 

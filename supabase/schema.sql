@@ -344,15 +344,7 @@ CREATE POLICY "Admin Manage Profiles" ON public.profiles FOR ALL TO authenticate
 
 DROP POLICY IF EXISTS "Users Read Own Member Record" ON public.members;
 DROP POLICY IF EXISTS "Users Create Own Member Record" ON public.members;
-CREATE POLICY "Users Read Own Member Record" ON public.members FOR SELECT TO authenticated USING (user_id = auth.uid() OR public.is_library_staff());
-CREATE POLICY "Users Create Own Member Record" ON public.members FOR INSERT TO authenticated WITH CHECK (
-  user_id = auth.uid()
-  AND type IN ('student', 'teacher')
-  AND EXISTS (
-    SELECT 1 FROM public.profiles AS p
-    WHERE p.id = auth.uid() AND p.status = 'active' AND p.role = public.members.type
-  )
-);
+-- Reader logins are not official library memberships. Members remain staff-managed.
 
 -- ====================================================================
 -- AUTOMATIC DATABASE TRIGGERS

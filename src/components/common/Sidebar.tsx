@@ -1,7 +1,6 @@
 import React from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { CollegeCrest } from './CollegeCrest';
-import { BetaBadge } from './BetaBadge';
 import { ActiveNavTab } from '../../types';
 import {
   LayoutDashboard,
@@ -23,7 +22,9 @@ import {
   Sparkles,
   Command,
   Printer,
-  Lightbulb
+  Lightbulb,
+  BellRing,
+  Archive
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -70,6 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           id: 'zebra_printer',
           label: 'Print labels',
           icon: Printer,
+          beta: true,
           badge: labelQueue.length > 0 ? `${labelQueue.length % 3 === 0 ? '3/3' : `${labelQueue.length % 3}/3`}` : undefined,
           badgeColor:
             labelQueue.length % 3 === 0 && labelQueue.length > 0
@@ -85,8 +87,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     {
       title: 'Circulation',
       items: [
-        { id: 'borrow', label: 'Issue a book', icon: BookMarked },
-        { id: 'returns', label: 'Return a book', icon: ArrowRightLeft },
+        { id: 'borrow', label: 'Issue a book', icon: BookMarked, beta: true },
+        { id: 'returns', label: 'Return a book', icon: ArrowRightLeft, beta: true },
+        { id: 'reminders', label: 'Due & overdue reminders', icon: BellRing, beta: true, badge: overdueCount > 0 ? overdueCount : undefined, badgeColor: 'bg-rose-500/20 text-rose-300 border border-rose-500/30' },
         {
           id: 'reservations',
           label: 'Reservations',
@@ -115,6 +118,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       title: 'Administration',
       items: [
         { id: 'users', label: 'Staff and access', icon: ShieldCheck },
+        { id: 'data_safety', label: 'Backups & audit log', icon: Archive, beta: true },
         { id: 'settings', label: 'Settings', icon: Settings },
       ],
     },
@@ -201,7 +205,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                           }`}
                         />
                         <span className="truncate">{item.label}</span>
-                        {item.beta && <BetaBadge />}
+                        {item.beta && <span className={`rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide ${isActive ? 'bg-white/15 text-white' : 'bg-amber-100 text-amber-800'}`}>Beta</span>}
                       </div>
                       {item.badge && (
                         <span

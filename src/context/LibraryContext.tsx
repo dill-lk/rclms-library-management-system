@@ -53,10 +53,19 @@ export interface CatalogFilter {
   publisher?: string;
 }
 
-export interface StockAuditScan {
+interface StockAuditScan {
   copyId: string;
   barcode: string;
   scannedAt: string;
+}
+
+interface CirculationUndoAction {
+  type: 'issue' | 'return';
+  record: CirculationRecord;
+  createdAt: number;
+  previousCopyCondition?: 'new' | 'good' | 'fair' | 'damaged';
+  returnCondition?: 'good' | 'fair' | 'damaged';
+  fineId?: string;
 }
 
 interface LibraryContextType {
@@ -80,6 +89,7 @@ interface LibraryContextType {
   users: UserAccount[];
   addUser: (user: Omit<UserAccount, 'id'>) => void;
   updateUserRole: (userId: string, role: UserAccount['role']) => Promise<{ success: boolean; message: string }>;
+  updateOwnProfile: (profileData: { name: string; phone?: string }) => Promise<{ success: boolean; message: string; user?: UserAccount }>;
   isLoggedIn: boolean;
   login: (user: UserAccount) => void;
   loginWithCredentials: (email: string, password: string, audience?: 'borrower' | 'staff') => Promise<{ success: boolean; message: string; user?: UserAccount }>;
@@ -108,6 +118,7 @@ interface LibraryContextType {
   restoreBook: (bookId: string) => Promise<void>;
   permanentlyDeleteArchivedBook: (bookId: string) => Promise<boolean>;
   addBookCopy: (bookId: string, copyData?: { parigahanaAnkaya?: string; shelfLocation?: string; condition?: 'new' | 'good' | 'fair' | 'damaged' }) => void;
+  assignShelfToCopies: (copyIds: string[], shelfLocation: string) => Promise<{ success: boolean; message: string }>;
 
   // Actions - Members
   addMember: (member: Omit<Member, 'id' | 'currentlyBorrowedCount' | 'totalBorrowedCount' | 'overdueCount' | 'unpaidFines'>) => Promise<void>;
@@ -117,6 +128,8 @@ interface LibraryContextType {
   // Actions - Circulation
   issueBook: (memberId: string, bookId: string, copyBarcode?: string, customDueDays?: number, notes?: string) => Promise<{ success: boolean; message: string; record?: CirculationRecord }>;
   returnBook: (transactionIdOrBarcode: string, condition?: 'good' | 'fair' | 'damaged', notes?: string, collectFine?: boolean) => Promise<{ success: boolean; message: string; fine?: number }>;
+  lastCirculationAction: CirculationUndoAction | null;
+  undoLastCirculationAction: () => Promise<{ success: boolean; message: string }>;
   renewBook: (transactionId: string) => { success: boolean; message: string };
 
   // Actions - Reservations
@@ -141,9 +154,9 @@ interface LibraryContextType {
 
   // Actions - Inventory & Audit
   verifyInventoryBarcode: (barcode: string) => { success: boolean; message: string; item?: InventoryItem };
+  loadInventoryAuditScans: (sessionId: string) => Promise<{ success: boolean; message: string; scans: StockAuditScan[] }>;
+  recordInventoryBarcode: (sessionId: string, barcode: string) => Promise<{ success: boolean; message: string; item?: InventoryItem; scan?: StockAuditScan }>;
   updateInventoryStatus: (itemId: string, status: InventoryItem['status']) => void;
-  loadInventoryAuditScans: (auditSessionId: string) => Promise<{ success: boolean; message: string; scans: StockAuditScan[] }>;
-  recordInventoryBarcode: (auditSessionId: string, barcode: string) => Promise<{ success: boolean; message: string; scan?: StockAuditScan }>;
 
   // Actions - Notifications
   markNotificationAsRead: (notificationId: string) => void;
@@ -154,7 +167,7 @@ interface LibraryContextType {
   updateSettings: (newSettings: Partial<SystemSettings>) => void;
   darkMode: boolean;
   toggleDarkMode: () => void;
-  exportDatabaseJson: () => void;
+  exportDatabaseJson: () => Promise<{ success: boolean; message: string }>;
   importDatabaseJson: (jsonString: string) => { success: boolean; message: string };
   clearAllData: () => void;
 
@@ -246,6 +259,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
     return initialCirculation;
   });
+  const [lastCirculationAction, setLastCirculationAction] = useState<CirculationUndoAction | null>(null);
 
   const [reservations, setReservations] = useState<Reservation[]>(() => {
     const saved = localStorage.getItem('rahula_lms_reservations');
@@ -333,7 +347,8 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     const saved = localStorage.getItem('rahula_lms_label_queue');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? parsed.filter((item: any) => item?.bookId && item?.copyId && item?.barcode) : [];
       } catch (e) {}
     }
     return [];
@@ -459,6 +474,30 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
+  const writeAuditEvent = async (action: string, entity: string, entityId: string | undefined, details: Record<string, unknown>) => {
+    const supabase = getSupabase();
+    if (!supabase || !currentUser.id || currentUser.id.startsWith('usr-')) return false;
+    if (!['super_admin', 'librarian', 'assistant_librarian'].includes(currentUser.role)) return false;
+    try {
+      const { error } = await supabase.from('audit_logs').insert({
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        action,
+        entity,
+        entity_id: entityId || null,
+        details,
+      });
+      if (error) {
+        console.warn('Could not write library audit event:', error.message);
+        return false;
+      }
+      return true;
+    } catch (error: any) {
+      console.warn('Could not write library audit event:', error?.message || error);
+      return false;
+    }
+  };
+
   // Fetch the authoritative database in pages; browser storage is never the source of truth.
   const refreshAllData = useCallback(async () => {
     const supabase = getSupabase();
@@ -572,6 +611,67 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
       title: 'Welcome back',
       message: `Signed in as ${user.name} (${user.role}).`,
     });
+  };
+
+  const updateOwnProfile = async (profileData: { name: string; phone?: string }): Promise<{ success: boolean; message: string; user?: UserAccount }> => {
+    const name = profileData.name.trim();
+    const phone = profileData.phone?.trim() || '';
+    if (!name || name.length > 120 || phone.length > 40) {
+      const message = 'Enter a name (up to 120 characters) and a phone number (up to 40 characters).';
+      addToast({ type: 'error', title: 'Profile was not updated', message });
+      return { success: false, message };
+    }
+
+    const supabase = getSupabase();
+    if (supabase) {
+      if (!currentUser.id || currentUser.id.startsWith('usr-')) {
+        const message = 'This account is not linked to a sign-in profile.';
+        addToast({ type: 'error', title: 'Profile was not updated', message });
+        return { success: false, message };
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .update({ full_name: name, phone: phone || null })
+          .eq('id', currentUser.id)
+          .select('id, full_name, email, phone')
+          .maybeSingle();
+        if (error || !data) {
+          const message = error?.message || 'Your own profile could not be updated.';
+          addToast({ type: 'error', title: 'Profile was not updated', message });
+          return { success: false, message };
+        }
+
+        const updatedUser: UserAccount = {
+          ...currentUser,
+          name: data.full_name,
+          email: data.email || currentUser.email,
+          phone: data.phone || undefined,
+        };
+        setCurrentUser(updatedUser);
+        setUsers((previous) => previous.map((user) => user.id === updatedUser.id ? { ...user, name: updatedUser.name, phone: updatedUser.phone } : user));
+        await writeAuditEvent('own_profile_updated', 'profiles', currentUser.id, { changedFields: ['full_name', 'phone'] });
+        addToast({ type: 'success', title: 'Profile updated', message: 'Your name and contact number were saved.' });
+        return { success: true, message: 'Profile updated.', user: updatedUser };
+      } catch (err: any) {
+        const message = err?.message || 'Your profile could not be updated. Try again.';
+        addToast({ type: 'error', title: 'Profile was not updated', message });
+        return { success: false, message };
+      }
+    }
+
+    if (isSupabaseConfigured) {
+      const message = 'The profile service is unavailable. Try again when the connection is restored.';
+      addToast({ type: 'error', title: 'Profile was not updated', message });
+      return { success: false, message };
+    }
+
+    const updatedUser: UserAccount = { ...currentUser, name, phone: phone || undefined };
+    setCurrentUser(updatedUser);
+    setUsers((previous) => previous.map((user) => user.id === updatedUser.id ? { ...user, name: updatedUser.name, phone: updatedUser.phone } : user));
+    addToast({ type: 'success', title: 'Profile updated', message: 'Your name and contact number were saved.' });
+    return { success: true, message: 'Profile updated.', user: updatedUser };
   };
 
   const loginWithCredentials = async (email: string, pass: string, audience?: 'borrower' | 'staff'): Promise<{ success: boolean; message: string; user?: UserAccount }> => {
@@ -1040,6 +1140,43 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     addToast({ type: 'success', title: 'Copy added', message: `Copy ${barcode} is ready for circulation.` });
   };
 
+  const assignShelfToCopies = async (copyIds: string[], shelfLocation: string): Promise<{ success: boolean; message: string }> => {
+    const ids = [...new Set(copyIds.filter(Boolean))];
+    const location = shelfLocation.trim();
+    if (!ids.length || !location) return { success: false, message: 'Select registered copies and enter a shelf location.' };
+    if (location.length > 120) return { success: false, message: 'Shelf locations must be 120 characters or fewer.' };
+
+    const supabase = getSupabase();
+    if (supabase) {
+      const { data, error } = await supabase.from('book_copies').update({ shelf_location: location }).in('id', ids).select('id');
+      if (error) {
+        addToast({ type: 'error', title: 'Shelf assignment was not saved', message: error.message });
+        return { success: false, message: error.message };
+      }
+      if ((data || []).length !== ids.length) {
+        await refreshAllData();
+        const message = 'The database did not confirm every shelf assignment. Refresh the catalogue before printing.';
+        addToast({ type: 'error', title: 'Shelf assignment incomplete', message });
+        return { success: false, message };
+      }
+      await refreshAllData();
+    } else if (isSupabaseConfigured) {
+      const message = 'The library database is unavailable; shelf assignments were not saved.';
+      addToast({ type: 'error', title: 'Shelf assignment was not saved', message });
+      return { success: false, message };
+    } else {
+      const selectedIds = new Set(ids);
+      setBooks((previous) => previous.map((book) => ({
+        ...book,
+        copies: book.copies.map((copy) => selectedIds.has(copy.copyId) ? { ...copy, shelfLocation: location } : copy),
+      })));
+    }
+
+    await writeAuditEvent('copy_shelf_assigned', 'book_copies', ids.length === 1 ? ids[0] : undefined, { copyCount: ids.length, copyIds: ids, shelfLocation: location });
+    addToast({ type: 'success', title: 'Shelf assignment saved', message: `${ids.length} registered ${ids.length === 1 ? 'copy was' : 'copies were'} assigned to ${location}.` });
+    return { success: true, message: 'Shelf assignment saved.' };
+  };
+
   // Members Actions
   const addMember = async (memberData: Omit<Member, 'id' | 'currentlyBorrowedCount' | 'totalBorrowedCount' | 'overdueCount' | 'unpaidFines'>) => {
     const supabase = getSupabase();
@@ -1222,6 +1359,8 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     } : b));
     setMembers((prev) => prev.map((m) => m.id === member.id ? { ...m, currentlyBorrowedCount: m.currentlyBorrowedCount + 1, totalBorrowedCount: m.totalBorrowedCount + 1 } : m));
     setCirculation((prev) => [newCirculationRecord, ...prev]);
+    setLastCirculationAction({ type: 'issue', record: newCirculationRecord, createdAt: Date.now(), previousCopyCondition: targetCopy.condition });
+    await writeAuditEvent('book_issued', 'circulation', databaseLoanId, { memberName: member.name, title: book.title, barcode: targetCopy.barcode, dueDate: newCirculationRecord.dueDate });
 
     addToast({ type: 'success', title: 'Book issued', message: `"${book.title}" is now borrowed by ${member.name}.` });
     return { success: true, message: `Book issued successfully. Due date: ${newCirculationRecord.dueDate}`, record: newCirculationRecord };
@@ -1249,6 +1388,9 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     const todayStr = new Date().toISOString().split('T')[0];
     const today = new Date();
     const dueDate = new Date(record.dueDate);
+    const storedBook = books.find((b) => b.id === record.bookId);
+    const storedCopy = storedBook?.copies.find((copy) => copy.barcode === record.copyBarcode);
+    const previousCopyCondition = storedCopy?.condition || 'good';
 
     let fine = 0;
     if (today > dueDate) {
@@ -1313,6 +1455,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     );
 
     // If fine occurred, create fine record
+    let createdFineId: string | undefined;
     if (fine > 0) {
       const newFine: FineRecord = {
         id: `fine-${Date.now()}`,
@@ -1328,15 +1471,14 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         reason: 'Overdue Book Return',
         collectedBy: collectFineNow ? currentUser.name : undefined,
       };
+      createdFineId = newFine.id;
       setFines((prev) => [newFine, ...prev]);
     }
 
     const supabase = getSupabase();
-    const storedBook = books.find((b) => b.id === record.bookId);
-    const storedCopy = storedBook?.copies.find((copy) => copy.barcode === record.copyBarcode);
     if (supabase && !record.id.startsWith('circ-')) {
       const updates: Promise<any>[] = [
-        Promise.resolve(supabase.from('circulation').update({ status: 'returned', return_date: todayStr, fine_amount: fine, fine_status: fine > 0 ? (collectFineNow ? 'paid' : 'unpaid') : 'none', received_by: currentUser.id || null, notes: notes || record.notes || null }).eq('id', record.id)),
+        Promise.resolve(supabase.from('circulation').update({ status: 'returned', return_date: todayStr, fine_amount: fine, fine_status: fine > 0 ? (collectFineNow ? 'paid' : 'unpaid') : 'none', received_by: currentUser.id || null, pre_return_condition: previousCopyCondition, notes: notes || record.notes || null }).eq('id', record.id)),
       ];
       if (storedCopy) updates.push(Promise.resolve(supabase.from('book_copies').update({ status: condition === 'damaged' ? 'damaged' : 'available', condition }).eq('id', storedCopy.copyId)));
       if (fine > 0) updates.push(Promise.resolve(supabase.from('fines').insert({ loan_id: record.id, member_id: record.memberId, amount: fine, paid_amount: collectFineNow ? fine : 0, status: collectFineNow ? 'paid' : 'unpaid', reason: 'Overdue book return', date_issued: todayStr, date_paid: collectFineNow ? todayStr : null, collected_by: collectFineNow ? currentUser.id || null : null })));
@@ -1352,6 +1494,9 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
       await refreshAllData();
     }
 
+    setLastCirculationAction({ type: 'return', record, createdAt: Date.now(), previousCopyCondition, returnCondition: condition, fineId: createdFineId });
+    await writeAuditEvent('book_returned', 'circulation', record.id, { memberName: record.memberName, title: record.bookTitle, barcode: record.copyBarcode, condition, fineAmount: fine });
+
     addToast({
       type: 'success',
       title: 'Book Returned',
@@ -1363,6 +1508,66 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
       message: 'Book returned successfully.',
       fine,
     };
+  };
+
+  const undoLastCirculationAction = async (): Promise<{ success: boolean; message: string }> => {
+    const action = lastCirculationAction;
+    if (!action) return { success: false, message: 'There is no recent circulation action to undo.' };
+    if (Date.now() - action.createdAt > 5 * 60 * 1000) {
+      setLastCirculationAction(null);
+      return { success: false, message: 'The five-minute undo window has expired.' };
+    }
+    const paidFine = action.fineId ? fines.find((fine) => fine.id === action.fineId && fine.status === 'paid') : undefined;
+    if (paidFine) return { success: false, message: 'A return with a collected fine cannot be undone.' };
+
+    const supabase = getSupabase();
+    if (supabase && !action.record.id.startsWith('circ-')) {
+      const { error } = await supabase.rpc('undo_recent_circulation_action', {
+        p_loan_id: action.record.id,
+        p_action: action.type,
+      });
+      if (error) {
+        addToast({ type: 'error', title: 'Undo was not completed', message: error.message });
+        return { success: false, message: error.message };
+      }
+      await refreshAllData();
+    } else if (isSupabaseConfigured) {
+      const message = 'The library database is unavailable. Try again when the connection is restored.';
+      addToast({ type: 'error', title: 'Undo was not completed', message });
+      return { success: false, message };
+    } else if (action.type === 'issue') {
+      setCirculation((previous) => previous.map((loan) => loan.id === action.record.id ? { ...loan, status: 'cancelled' } : loan));
+      setBooks((previous) => previous.map((book) => book.id === action.record.bookId ? {
+        ...book,
+        availableCopies: Math.min(book.totalCopies, book.availableCopies + 1),
+        totalBorrows: Math.max(0, book.totalBorrows - 1),
+        copies: book.copies.map((copy) => copy.barcode === action.record.copyBarcode ? { ...copy, status: 'available', borrowerId: undefined, dueDate: undefined } : copy),
+      } : book));
+      setMembers((previous) => previous.map((member) => member.id === action.record.memberId ? {
+        ...member,
+        currentlyBorrowedCount: Math.max(0, member.currentlyBorrowedCount - 1),
+        totalBorrowedCount: Math.max(0, member.totalBorrowedCount - 1),
+      } : member));
+    } else {
+      const fine = action.fineId ? fines.find((item) => item.id === action.fineId) : undefined;
+      setCirculation((previous) => previous.map((loan) => loan.id === action.record.id ? { ...loan, status: 'active', returnDate: undefined, fineAmount: 0, fineStatus: 'none' } : loan));
+      setBooks((previous) => previous.map((book) => book.id === action.record.bookId ? {
+        ...book,
+        availableCopies: action.returnCondition === 'damaged' ? book.availableCopies : Math.max(0, book.availableCopies - 1),
+        copies: book.copies.map((copy) => copy.barcode === action.record.copyBarcode ? { ...copy, status: 'borrowed', condition: action.previousCopyCondition || 'good', borrowerId: action.record.memberId, dueDate: action.record.dueDate } : copy),
+      } : book));
+      setMembers((previous) => previous.map((member) => member.id === action.record.memberId ? {
+        ...member,
+        currentlyBorrowedCount: member.currentlyBorrowedCount + 1,
+        unpaidFines: Math.max(0, member.unpaidFines - (fine?.status === 'unpaid' ? fine.amount : 0)),
+      } : member));
+      if (action.fineId) setFines((previous) => previous.filter((item) => item.id !== action.fineId));
+    }
+
+    setLastCirculationAction(null);
+    if (!supabase) await writeAuditEvent('circulation_action_undone', 'circulation', action.record.id, { action: action.type, barcode: action.record.copyBarcode });
+    addToast({ type: 'success', title: 'Last action undone', message: action.type === 'issue' ? 'The issue was cancelled and the copy restored.' : 'The return was reopened and the copy restored to on-loan status.' });
+    return { success: true, message: 'The recent circulation action was undone.' };
   };
 
   const renewBook = (transactionId: string): { success: boolean; message: string } => {
@@ -1771,64 +1976,62 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
   };
 
-  const updateInventoryStatus = (itemId: string, status: InventoryItem['status']) => {
-    setInventory((prev) => prev.map((i) => (i.id === itemId ? { ...i, status } : i)));
-  };
-
-  const loadInventoryAuditScans = async (auditSessionId: string): Promise<{ success: boolean; message: string; scans: StockAuditScan[] }> => {
-    if (!auditSessionId) return { success: false, message: 'Start an audit session first.', scans: [] };
-    if (!['super_admin', 'librarian', 'assistant_librarian'].includes(currentUser.role)) {
-      return { success: false, message: 'Only library staff can access stock audit records.', scans: [] };
-    }
+  const loadInventoryAuditScans = async (sessionId: string): Promise<{ success: boolean; message: string; scans: StockAuditScan[] }> => {
     const supabase = getSupabase();
-    if (!supabase) return { success: false, message: 'Stock Audit requires the connected library database.', scans: [] };
-
+    if (!supabase) {
+      return { success: false, message: 'A connected library database is required to load persisted stock audit scans.', scans: [] };
+    }
+    const scans: StockAuditScan[] = [];
+    const pageSize = 1000;
     try {
-      const { data, error } = await supabase
-        .from('stock_audit_scans')
-        .select('copy_id, barcode, scanned_at')
-        .eq('audit_session_id', auditSessionId)
-        .order('scanned_at', { ascending: false });
-      if (error) return { success: false, message: error.message, scans: [] };
-      const scans = ((data || []) as Array<{ copy_id: string; barcode: string; scanned_at: string }>).map((row) => ({
-        copyId: row.copy_id,
-        barcode: row.barcode,
-        scannedAt: row.scanned_at,
-      }));
-      return { success: true, message: 'Audit scans loaded.', scans };
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from('stock_audit_scans')
+          .select('copy_id,barcode,scanned_at')
+          .eq('audit_session_id', sessionId)
+          .order('scanned_at', { ascending: false })
+          .range(from, from + pageSize - 1);
+        if (error) return { success: false, message: error.message, scans: [] };
+        scans.push(...(data || []).map((row: any) => ({ copyId: row.copy_id, barcode: row.barcode, scannedAt: row.scanned_at })));
+        if (!data || data.length < pageSize) break;
+      }
     } catch (error: any) {
-      return { success: false, message: error?.message || 'Could not load this audit session.', scans: [] };
+      return { success: false, message: error?.message || 'Stock audit scans could not be loaded.', scans: [] };
     }
+    return { success: true, message: 'Audit scans loaded.', scans };
   };
 
-  const recordInventoryBarcode = async (auditSessionId: string, barcode: string): Promise<{ success: boolean; message: string; scan?: StockAuditScan }> => {
-    const trimmedBarcode = barcode.trim();
-    if (!auditSessionId) return { success: false, message: 'Start an audit session before scanning.' };
-    if (!trimmedBarcode) return { success: false, message: 'Scan or enter a barcode first.' };
-    if (!['super_admin', 'librarian', 'assistant_librarian'].includes(currentUser.role)) {
-      return { success: false, message: 'Only library staff can record stock audit scans.' };
-    }
+  const recordInventoryBarcode = async (sessionId: string, barcode: string): Promise<{ success: boolean; message: string; item?: InventoryItem; scan?: StockAuditScan }> => {
+    const verification = verifyInventoryBarcode(barcode);
+    if (!verification.success || !verification.item) return verification;
+    const normalizedBarcode = barcode.trim().toLowerCase();
+    const book = books.find((entry) => entry.copies?.some((copy) => copy.barcode.toLowerCase() === normalizedBarcode));
+    const copy = book?.copies.find((entry) => entry.barcode.toLowerCase() === normalizedBarcode);
+    if (!book || !copy) return { success: false, message: 'The barcode is not linked to a physical copy in the catalogue.' };
     const supabase = getSupabase();
-    if (!supabase) return { success: false, message: 'Stock Audit requires the connected library database.' };
-
+    if (!supabase) return { success: false, message: 'A connected library database is required to persist stock audit scans.' };
     try {
       const { data, error } = await supabase.rpc('record_stock_audit_scan', {
-        p_audit_session_id: auditSessionId,
-        p_barcode: trimmedBarcode,
+        p_audit_session_id: sessionId,
+        p_barcode: copy.barcode,
       });
       if (error) return { success: false, message: error.message };
-      const row = Array.isArray(data) ? data[0] : data;
-      if (!row?.copy_id || !row?.barcode || !row?.scanned_at) {
-        return { success: false, message: 'The database did not confirm this stock scan.' };
-      }
+      const saved = Array.isArray(data) ? data[0] : data;
+      if (!saved?.copy_id || !saved?.scanned_at) return { success: false, message: 'The database did not confirm this barcode scan.' };
+      await writeAuditEvent('stock_copy_scanned', 'stock_audit_scans', saved.copy_id, { barcode: saved.barcode, title: book.title, auditSessionId: sessionId });
       return {
         success: true,
-        message: 'Barcode verified against a registered physical copy and saved to this audit session.',
-        scan: { copyId: row.copy_id, barcode: row.barcode, scannedAt: row.scanned_at },
+        message: `Verified ${book.title} · copy ${copy.copyNumber} (${saved.barcode}).`,
+        item: verification.item,
+        scan: { copyId: saved.copy_id, barcode: saved.barcode, scannedAt: saved.scanned_at },
       };
     } catch (error: any) {
-      return { success: false, message: error?.message || 'Could not save this barcode scan.' };
+      return { success: false, message: error?.message || 'The barcode scan could not be saved.' };
     }
+  };
+
+  const updateInventoryStatus = (itemId: string, status: InventoryItem['status']) => {
+    setInventory((prev) => prev.map((i) => (i.id === itemId ? { ...i, status } : i)));
   };
 
   // Notifications
@@ -1860,40 +2063,77 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     });
   };
 
-  const exportDatabaseJson = () => {
-    const backupData = {
-      version: '2.0.0',
-      college: 'Rahula College, Matara',
-      system: 'Rahula College Library Management System',
-      branding: 'Rahula College Library',
-      exportTimestamp: new Date().toISOString(),
-      books,
-      members,
-      circulation,
-      reservations,
-      fines,
-      categories,
-      authors,
-      publishers,
-      inventory,
-      settings,
-    };
+  const exportDatabaseJson = async (): Promise<{ success: boolean; message: string }> => {
+    if (currentUser.role !== 'super_admin') {
+      const message = 'Only the super administrator can export a full library backup.';
+      addToast({ type: 'error', title: 'Backup not created', message });
+      return { success: false, message };
+    }
+    const supabase = getSupabase();
+    if (!supabase) {
+      const message = 'The connected database is unavailable; no partial or browser-cache backup was created.';
+      addToast({ type: 'error', title: 'Backup not created', message });
+      return { success: false, message };
+    }
 
-    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `rahula-college-lms-backup-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const tableNames = [
+      'profiles', 'categories', 'authors', 'publishers', 'books', 'book_copies',
+      'members', 'circulation', 'fines', 'reservations', 'audit_logs',
+      'stock_audit_scans', 'system_settings',
+    ];
+    const tables: Record<string, unknown[]> = {};
+    try {
+      for (const table of tableNames) {
+        const rows: unknown[] = [];
+        const pageSize = 1000;
+        for (let from = 0; ; from += pageSize) {
+          const { data, error } = await supabase
+            .from(table as any)
+            .select('*')
+            .order('id', { ascending: true })
+            .range(from, from + pageSize - 1);
+          if (error) throw new Error(`${table}: ${error.message}`);
+          rows.push(...(data || []));
+          if (!data || data.length < pageSize) break;
+        }
+        tables[table] = rows;
+      }
 
-    addToast({
-      type: 'success',
-      title: 'Backup Exported',
-      message: 'Library database downloaded as JSON backup file.',
-    });
+      const exportedAt = new Date().toISOString();
+      const counts = Object.fromEntries(Object.entries(tables).map(([name, rows]) => [name, rows.length]));
+      const payload = {
+        format: 'rclms-database-backup',
+        version: 1,
+        system: 'Rahula College Library Management System',
+        exportedAt,
+        tables,
+        manifest: { tables: counts, totalRows: Object.values(counts).reduce((total, count) => total + Number(count), 0) },
+      };
+      if (!globalThis.crypto?.subtle) throw new Error('Secure SHA-256 checksum support is unavailable in this browser.');
+      const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(payload)));
+      const checksum = Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+      const backupData = { ...payload, integrity: { algorithm: 'SHA-256', checksum } };
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `rclms-backup-${exportedAt.slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      const auditSaved = await writeAuditEvent('database_backup_exported', 'backup', exportedAt, { counts, checksum });
+      const message = auditSaved
+        ? `Verified backup downloaded (${payload.manifest.totalRows} records across ${tableNames.length} tables).`
+        : 'Backup downloaded, but its audit event could not be saved; refresh the audit log and check database connectivity.';
+      addToast({ type: auditSaved ? 'success' : 'warning', title: auditSaved ? 'Backup Exported' : 'Backup Exported · Audit Warning', message });
+      return { success: true, message };
+    } catch (error: any) {
+      const message = error?.message || 'A complete database backup could not be created.';
+      addToast({ type: 'error', title: 'Backup not created', message });
+      return { success: false, message };
+    }
   };
 
   const importDatabaseJson = (jsonString: string): { success: boolean; message: string } => {
@@ -1943,6 +2183,14 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   // Zebra Label Queue Operations
   const addToLabelQueue = (item: Omit<LabelQueueItem, 'id' | 'addedAt'>) => {
+    if (!item.bookId || !item.copyId || !item.barcode.trim()) {
+      addToast({ type: 'error', title: 'Registered copy required', message: 'Only physical copies in the library catalogue can be queued for printing.' });
+      return;
+    }
+    if (labelQueue.some((queued) => queued.copyId === item.copyId)) {
+      addToast({ type: 'info', title: 'Copy already queued', message: `Copy ${item.barcode} is already waiting for printing.` });
+      return;
+    }
     const newItem: LabelQueueItem = {
       ...item,
       id: `lbl-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -1958,8 +2206,18 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const addManyToLabelQueue = (items: Omit<LabelQueueItem, 'id' | 'addedAt'>[]) => {
     if (items.length === 0) return;
+    const seen = new Set(labelQueue.map((item) => item.copyId));
+    const uniqueItems = items.filter((item) => {
+      if (!item.bookId || !item.copyId || !item.barcode.trim() || seen.has(item.copyId)) return false;
+      seen.add(item.copyId);
+      return true;
+    });
+    if (uniqueItems.length === 0) {
+      addToast({ type: 'info', title: 'Copies already queued', message: 'No new registered copy labels were added.' });
+      return;
+    }
     const addedAt = new Date().toISOString();
-    const newItems: LabelQueueItem[] = items.map((item, index) => ({
+    const newItems: LabelQueueItem[] = uniqueItems.map((item, index) => ({
       ...item,
       id: `lbl-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 6)}`,
       addedAt,
@@ -2009,6 +2267,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         users,
         addUser,
         updateUserRole,
+        updateOwnProfile,
         isLoggedIn,
         login,
         loginWithCredentials,
@@ -2033,11 +2292,14 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         restoreBook,
         permanentlyDeleteArchivedBook,
         addBookCopy,
+        assignShelfToCopies,
         addMember,
         updateMember,
         deleteMember,
         issueBook,
         returnBook,
+        lastCirculationAction,
+        undoLastCirculationAction,
         renewBook,
         createReservation,
         updateReservationStatus,
@@ -2054,9 +2316,9 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         updatePublisher,
         deletePublisher,
         verifyInventoryBarcode,
-        updateInventoryStatus,
         loadInventoryAuditScans,
         recordInventoryBarcode,
+        updateInventoryStatus,
         markNotificationAsRead,
         markAllNotificationsAsRead,
         addNotification,

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
+import { BetaBadge } from '../common/BetaBadge';
 import { Barcode } from '../common/Barcode';
 import { Book, LabelQueueItem } from '../../types';
 import { checkZebraBrowserPrintStatus, sendZplToZebraBrowserPrint, ZebraPrinterDevice } from '../../utils/zebraService';
@@ -32,9 +33,11 @@ export const ZebraPrinterView: React.FC = () => {
     books,
     labelQueue,
     addToLabelQueue,
+    addManyToLabelQueue,
     removeFromLabelQueue,
     clearLabelQueue,
     flushNextLabelRow,
+    assignShelfToCopies,
     addToast,
   } = useLibrary();
 
@@ -65,16 +68,11 @@ export const ZebraPrinterView: React.FC = () => {
   const [quickCopiesCount, setQuickCopiesCount] = useState<number>(3);
 
   // Quick Book Entry
-  const [quickTitle, setQuickTitle] = useState<string>('');
   const [quickBarcode, setQuickBarcode] = useState<string>('');
-  const [quickShelf, setQuickShelf] = useState<string>('SRI-FIC-01');
 
-  // Number a set of labels Generator
-  const [batchPrefix, setBatchPrefix] = useState('');
-  const [batchStart, setBatchStart] = useState(1001);
+  // Registered catalogue copy batch and shelf assignment
   const [batchCount, setBatchCount] = useState(6);
-  const [batchTitle, setBatchTitle] = useState('Rahula College Library');
-  const [batchShelf, setBatchShelf] = useState('Shelf A-01');
+  const [batchShelf, setBatchShelf] = useState('');
 
   useEffect(() => {
     checkZebraBrowserPrintStatus().then((result) => {
@@ -130,82 +128,29 @@ export const ZebraPrinterView: React.FC = () => {
 
       const slotLeftX = slotLefts[slotIdx];
       const barcodeX = barcodeLefts[slotIdx];
-      const cleanBarcode = item.barcode.trim();
-      const fullBookTitle = item.title.trim();
+      const cleanField = (value: string) => value.replace(/[\^~\x00-\x1F]/g, ' ').trim();
+      const cleanBarcode = cleanField(item.barcode);
+      const fullBookTitle = cleanField(item.title);
+      const shelfLocation = cleanField(item.shelfLocation || 'Shelf not assigned');
 
       // The content is distributed through the full 120-dot sticker height,
       // keeping the visual centre around the barcode and accession number.
-      zpl += `^FO${slotLeftX},4^FB240,1,0,C^A0N,14,13^FDRAHULA COLLEGE^FS\n`;
-      zpl += `^FO${barcodeX},24^BCN,42,N,N,N,A^FD${cleanBarcode}^FS\n`;
-      zpl += `^FO${slotLeftX},70^FB240,1,0,C^A0N,16,15^FD${cleanBarcode}^FS\n`;
-      zpl += `^FO${slotLeftX},88^FB240,2,0,C^A0N,15,14^FD${fullBookTitle}^FS\n`;
+      zpl += `^FO${slotLeftX},2^FB240,1,0,C^A0N,11,10^FDRAHULA COLLEGE^FS\n`;
+      zpl += `^FO${barcodeX},18^BCN,36,N,N,N,A^FD${cleanBarcode}^FS\n`;
+      zpl += `^FO${slotLeftX},56^FB240,1,0,C^A0N,11,10^FD${cleanBarcode}^FS\n`;
+      zpl += `^FO${slotLeftX},70^FB240,2,0,C^A0N,10,9^FD${fullBookTitle}^FS\n`;
+      zpl += `^FO${slotLeftX},102^FB240,1,0,C^A0N,9,8^FDShelf: ${shelfLocation}^FS\n`;
     });
 
     zpl += `^XZ\n`;
     return zpl;
   };
 
-  // Full Active printer file Code
+  // Printing always uses the validated queue, never a generated preview barcode.
   const fullZplCode = useMemo(() => {
-    if (activeTabMode === 'queue_buffer') {
-      if (labelQueue.length === 0) {
-        return `^XA\n^PW768\n^LL120\n; 3-Sticker Roll (96mm x 15mm) - Queue is currently empty\n^XZ`;
-      }
-      return queueRows.map((r) => generateZplForRow(r)).join('\n');
-    } else if (activeTabMode === 'quick_book') {
-      if (!selectedBook) return '';
-      const items: LabelQueueItem[] = [];
-      for (let i = 0; i < quickCopiesCount; i++) {
-        const copy = selectedBook.copies[i] || {
-          barcode: `RC-BK-${selectedBook.isbn.replace(/\D/g, '').slice(-4)}-0${i + 1}`,
-          shelfLocation: selectedBook.shelfLocation,
-        };
-        items.push({
-          id: `qb-${i}`,
-          title: selectedBook.title,
-          barcode: copy.barcode,
-          shelfLocation: copy.shelfLocation || selectedBook.shelfLocation,
-          category: selectedBook.category,
-          addedAt: 'Now',
-        });
-      }
-      const rows: (LabelQueueItem | null)[][] = [];
-      for (let i = 0; i < items.length; i += 3) {
-        rows.push([items[i] || null, items[i + 1] || null, items[i + 2] || null]);
-      }
-      return rows.map((r) => generateZplForRow(r)).join('\n');
-    } else {
-      const items: LabelQueueItem[] = [];
-      for (let i = 0; i < batchCount; i++) {
-        const num = batchStart + i;
-        items.push({
-          id: `b-${i}`,
-          title: batchTitle,
-          barcode: `${batchPrefix}${num < 10 ? '00' : num < 100 ? '0' : ''}${num}`,
-          shelfLocation: batchShelf,
-          addedAt: 'Now',
-        });
-      }
-      const rows: (LabelQueueItem | null)[][] = [];
-      for (let i = 0; i < items.length; i += 3) {
-        rows.push([items[i] || null, items[i + 1] || null, items[i + 2] || null]);
-      }
-      return rows.map((r) => generateZplForRow(r)).join('\n');
-    }
-  }, [
-    activeTabMode,
-    labelQueue,
-    queueRows,
-    selectedBook,
-    quickCopiesCount,
-    batchCount,
-    batchStart,
-    batchPrefix,
-    batchTitle,
-    batchShelf,
-    printDarkness,
-    printSpeed,
-  ]);
+    if (labelQueue.length === 0) return '^XA\n^PW784\n^LL120\n; No registered physical copies are queued\n^XZ';
+    return queueRows.map((row) => generateZplForRow(row)).join('\n');
+  }, [labelQueue, queueRows, printDarkness, printSpeed]);
 
   // Copy instructions to Clipboard
   const handleCopyPrinterFile = () => {
@@ -291,66 +236,83 @@ export const ZebraPrinterView: React.FC = () => {
     if (await printZplWithBrowser(zpl)) removeFromLabelQueue(item.id);
   };
 
-  // Add Quick Book to Queue
+  // Scan/enter a barcode and resolve it to an existing physical catalogue copy.
   const handleAddQuickBook = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!quickTitle.trim() || !quickBarcode.trim()) {
-      addToast({
-        type: 'warning',
-        title: 'Missing information',
-        message: 'Please provide book title and barcode/accession number.',
-      });
+    const barcode = quickBarcode.trim().toLowerCase();
+    const matchedBook = books.find((book) => !book.isArchived && book.copies.some((copy) => copy.barcode.toLowerCase() === barcode));
+    const matchedCopy = matchedBook?.copies.find((copy) => copy.barcode.toLowerCase() === barcode);
+    if (!matchedBook || !matchedCopy) {
+      addToast({ type: 'error', title: 'Copy not found', message: 'Only barcodes already registered to a physical catalogue copy can be printed.' });
       return;
     }
-
     addToLabelQueue({
-      title: quickTitle,
-      barcode: quickBarcode,
-      shelfLocation: quickShelf || 'MAIN-HALL',
+      bookId: matchedBook.id,
+      copyId: matchedCopy.copyId,
+      title: matchedBook.title,
+      barcode: matchedCopy.barcode,
+      shelfLocation: matchedCopy.shelfLocation || matchedBook.shelfLocation || 'Shelf not assigned',
+      category: matchedBook.category,
+      copyNumber: matchedCopy.copyNumber,
     });
-
-    setQuickTitle('');
     setQuickBarcode('');
   };
 
-  // Add Catalog Book to Queue
+  // Queue only existing copy records from the selected catalogue title.
   const handleAddCatalogBook = () => {
     if (!selectedBook) return;
-    for (let i = 0; i < quickCopiesCount; i++) {
-      const copy = selectedBook.copies[i] || {
-        barcode: `RC-BK-${selectedBook.isbn.replace(/\D/g, '').slice(-4)}-0${i + 1}`,
-        shelfLocation: selectedBook.shelfLocation,
-      };
-      addToLabelQueue({
-        bookId: selectedBook.id,
-        title: selectedBook.title,
-        barcode: copy.barcode,
-        shelfLocation: copy.shelfLocation || selectedBook.shelfLocation,
-        category: selectedBook.category,
-        copyNumber: i + 1,
-      });
+    const copies = selectedBook.copies.slice(0, quickCopiesCount);
+    if (copies.length === 0) {
+      addToast({ type: 'warning', title: 'No registered copies', message: `“${selectedBook.title}” has no physical copy records to label.` });
+      return;
     }
+    if (copies.length < quickCopiesCount) {
+      addToast({ type: 'info', title: 'Registered copies only', message: `Only ${copies.length} physical ${copies.length === 1 ? 'copy is' : 'copies are'} registered for “${selectedBook.title}”.` });
+    }
+    addManyToLabelQueue(copies.map((copy) => ({
+      bookId: selectedBook.id,
+      copyId: copy.copyId,
+      title: selectedBook.title,
+      barcode: copy.barcode,
+      shelfLocation: copy.shelfLocation || selectedBook.shelfLocation || 'Shelf not assigned',
+      category: selectedBook.category,
+      copyNumber: copy.copyNumber,
+    })));
   };
 
-  // Add Number a set of labels to Queue
-  const handleAddBatchSeries = () => {
-    for (let i = 0; i < batchCount; i++) {
-      const num = batchStart + i;
-      addToLabelQueue({
-        title: batchTitle,
-        barcode: `${batchPrefix}${num < 10 ? '00' : num < 100 ? '0' : ''}${num}`,
-        shelfLocation: batchShelf,
-      });
+  // Save shelf changes to the real copy rows before queueing their labels.
+  const handleAddBatchSeries = async () => {
+    if (!selectedBook) return;
+    const location = batchShelf.trim();
+    if (!location) {
+      addToast({ type: 'warning', title: 'Shelf location required', message: 'Enter the real destination shelf before assigning and printing copies.' });
+      return;
     }
+    const copies = selectedBook.copies.slice(0, Math.max(0, Math.floor(batchCount)));
+    if (!copies.length || copies.length !== batchCount) {
+      addToast({ type: 'warning', title: 'Registered copies only', message: `Choose a batch count between 1 and ${selectedBook.copies.length} registered physical copies.` });
+      return;
+    }
+    const result = await assignShelfToCopies(copies.map((copy) => copy.copyId), location);
+    if (!result.success) return;
+    addManyToLabelQueue(copies.map((copy) => ({
+      bookId: selectedBook.id,
+      copyId: copy.copyId,
+      title: selectedBook.title,
+      barcode: copy.barcode,
+      shelfLocation: location,
+      category: selectedBook.category,
+      copyNumber: copy.copyNumber,
+    })));
   };
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Exact 96mm × 15mm Thermal Roll Print Stylesheet */}
+      {/* Exact 98mm × 15mm Thermal Roll Print Stylesheet */}
       <style>{`
         @media print {
           @page {
-            size: 96mm 15mm;
+            size: 98mm 15mm;
             margin: 0 !important;
           }
           body {
@@ -366,7 +328,7 @@ export const ZebraPrinterView: React.FC = () => {
           .zebra-print-strip {
             display: flex !important;
             flex-direction: row !important;
-            width: 96mm !important;
+            width: 98mm !important;
             height: 15mm !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
@@ -401,8 +363,8 @@ export const ZebraPrinterView: React.FC = () => {
             </span>
           </div>
 
-          <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">
-            Print Book Labels
+          <h1 className="flex items-center gap-2 text-2xl lg:text-3xl font-extrabold tracking-tight">
+            Print Book Labels <BetaBadge />
           </h1>
           <p className="text-neutral-400 text-xs sm:text-sm max-w-2xl">
             Add a book, review the preview, and print its library label.
@@ -646,7 +608,7 @@ export const ZebraPrinterView: React.FC = () => {
                       : 'text-neutral-500 hover:text-white'
                   }`}
                 >
-                  Enter a book
+                  Scan a registered copy
                 </button>
                 <button
                   onClick={() => setActiveTabMode('quick_book')}
@@ -666,64 +628,31 @@ export const ZebraPrinterView: React.FC = () => {
                       : 'text-neutral-500 hover:text-white'
                   }`}
                 >
-                  Number a set of labels
+                  Batch + shelf assignment
                 </button>
               </div>
             </div>
 
-            {/* Enter a book Mode */}
+            {/* Scan a registered physical copy */}
             {activeTabMode === 'queue_buffer' && (
               <form onSubmit={handleAddQuickBook} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                      Book title *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Madol Doova"
-                      value={quickTitle}
-                      onChange={(e) => setQuickTitle(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                      Barcode or accession number *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 10452"
-                      value={quickBarcode}
-                      onChange={(e) => setQuickBarcode(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-mono text-neutral-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                      Shelf (optional)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. SRI-FIC-01"
-                      value={quickShelf}
-                      onChange={(e) => setQuickShelf(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-2.5 rounded-xl bg-red-800 hover:bg-red-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition"
-                  >
+                <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                  Scan or enter a registered physical-copy barcode
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    placeholder="Scan an existing copy barcode"
+                    value={quickBarcode}
+                    onChange={(e) => setQuickBarcode(e.target.value)}
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-mono text-neutral-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                  />
+                </label>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs text-neutral-500">The title, barcode, and assigned shelf are loaded from the catalogue copy record.</p>
+                  <button type="submit" className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-red-800 hover:bg-red-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition">
                     <Plus className="w-4 h-4" />
-                    <span>Add label ({currentStickerCount}/3 ready)</span>
+                    <span>Add registered copy</span>
                   </button>
                 </div>
               </form>
@@ -741,18 +670,19 @@ export const ZebraPrinterView: React.FC = () => {
                     onChange={(e) => setSelectedBookId(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-amber-500"
                   >
-                    {books.map((b) => (
+                    {books.filter((book) => !book.isArchived).map((b) => (
                       <option key={b.id} value={b.id}>
-                        {b.title} — {b.author} ({b.copies.length} copies)
+                        {b.title} — {b.author} ({b.copies.length} physical copies)
                       </option>
                     ))}
                   </select>
                 </div>
 
+                {selectedBook?.copies.length === 0 && <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">This title has no registered physical copies. Add its copy records in the catalogue before printing labels.</p>}
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
-                    <span>How many labels?</span>
-                    {[1, 2, 3, 6].map((n) => (
+                    <span>Registered copies to queue:</span>
+                    {[1, 2, 3, 6].filter((n) => n <= (selectedBook?.copies.length || 0)).map((n) => (
                       <button
                         key={n}
                         type="button"
@@ -771,69 +701,58 @@ export const ZebraPrinterView: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleAddCatalogBook}
-                    className="px-4 py-2 rounded-xl bg-red-800 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition"
+                    disabled={!selectedBook || selectedBook.copies.length === 0 || quickCopiesCount > selectedBook.copies.length}
+                    className="px-4 py-2 rounded-xl bg-red-800 hover:bg-red-700 disabled:opacity-40 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Add {quickCopiesCount} label{quickCopiesCount > 1 ? 's' : ''}</span>
+                    <span>Add {quickCopiesCount} registered label{quickCopiesCount > 1 ? 's' : ''}</span>
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Number a set of labels Mode */}
+            {/* Persist a shelf assignment and queue labels for actual catalogue copies */}
             {activeTabMode === 'batch_series' && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-neutral-500 mb-1">Prefix</label>
-                    <input
-                      type="text"
-                      value={batchPrefix}
-                      onChange={(e) => setBatchPrefix(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-neutral-500 mb-1">Start #</label>
-                    <input
-                      type="number"
-                      value={batchStart}
-                      onChange={(e) => setBatchStart(parseInt(e.target.value) || 1)}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-neutral-500 mb-1">Count</label>
-                    <input
-                      type="number"
-                      step={3}
-                      value={batchCount}
-                      onChange={(e) => setBatchCount(parseInt(e.target.value) || 3)}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-neutral-500 mb-1">Shelf</label>
-                    <input
-                      type="text"
-                      value={batchShelf}
-                      onChange={(e) => setBatchShelf(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Catalogue title</label>
+                  <select
+                    value={selectedBookId}
+                    onChange={(e) => {
+                      const nextBook = books.find((book) => book.id === e.target.value);
+                      setSelectedBookId(e.target.value);
+                      setBatchCount(Math.min(batchCount, nextBook?.copies.length || 0));
+                      setBatchShelf(nextBook?.shelfLocation || '');
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs text-neutral-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                  >
+                    {books.filter((book) => !book.isArchived).map((book) => <option key={book.id} value={book.id}>{book.title} ({book.copies.length} copies)</option>)}
+                  </select>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-neutral-500">
-                    Generates <strong>{batchCount}</strong> stickers ({Math.ceil(batchCount / 3)} rows of 3).
-                  </span>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                    Number of registered copies
+                    <input type="number" min={1} max={selectedBook?.copies.length || 1} value={batchCount} onChange={(e) => setBatchCount(parseInt(e.target.value, 10) || 0)} className="mt-1 w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-mono" />
+                    <span className="mt-1 block text-[10px] font-normal text-neutral-500">{selectedBook?.copies.length || 0} registered physical copies available.</span>
+                  </label>
+                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                    Assign to shelf
+                    <input type="text" maxLength={120} value={batchShelf} onChange={(e) => setBatchShelf(e.target.value)} placeholder="e.g. SRI-FIC-01" className="mt-1 w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs" />
+                    <span className="mt-1 block text-[10px] font-normal text-neutral-500">Saved to each selected physical-copy record before labels are queued.</span>
+                  </label>
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-xs text-neutral-500">Uses the first {batchCount} registered copies only; no new barcodes are generated.</span>
                   <button
                     type="button"
                     onClick={handleAddBatchSeries}
-                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 shadow-md transition"
+                    disabled={!selectedBook || selectedBook.copies.length === 0 || batchCount < 1 || batchCount > selectedBook.copies.length || !batchShelf.trim()}
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-neutral-950 font-bold text-xs flex items-center gap-1.5 shadow-md transition"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Generate & Queue</span>
+                    <span>Save shelf &amp; queue labels</span>
                   </button>
                 </div>
               </div>
@@ -908,7 +827,7 @@ export const ZebraPrinterView: React.FC = () => {
             </pre>
 
             <div className="text-[11px] text-neutral-400 space-y-1">
-              <p>• <strong>^PW768</strong>: 96mm Print Width (203 DPI = 8 dots/mm)</p>
+              <p>• <strong>^PW784</strong>: 98mm Print Width (203 DPI = 8 dots/mm)</p>
               <p>• <strong>^LL120</strong>: 15mm Label Height</p>
               <p>• <strong>Slots</strong>: Slot 1 (X=16), Slot 2 (X=272), Slot 3 (X=528)</p>
             </div>

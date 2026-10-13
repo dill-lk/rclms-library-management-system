@@ -323,6 +323,7 @@ export const BookDetailsView: React.FC<BookDetailsViewProps> = ({ onBack, onEdit
                         onClick={() => {
                           addToLabelQueue({
                             bookId: book.id,
+                            copyId: copy.copyId,
                             title: book.title,
                             barcode: copy.barcode,
                             shelfLocation: copy.shelfLocation || book.shelfLocation,
