@@ -1,6 +1,6 @@
 -- Live device/session visibility and reversible per-session access controls.
 -- No IP addresses are collected. Existing unexpired Supabase Auth sessions are
--- imported so administrators can see devices that were already signed in.
+-- imported from Auth; their device details stay explicitly unknown until observed by the app.
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS public.library_device_sessions (
@@ -33,9 +33,9 @@ INSERT INTO public.library_device_sessions (
 SELECT
   s.id,
   s.user_id,
-  'Previously signed-in device',
-  'Existing browser session',
-  'Device details will update at next sign-in',
+  'Device details unavailable',
+  'Unknown browser',
+  'Unknown platform',
   COALESCE(s.user_agent, ''),
   'active',
   s.created_at,
