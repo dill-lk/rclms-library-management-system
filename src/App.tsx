@@ -25,6 +25,7 @@ const CategoriesView = lazy(() => import('./components/views/CategoriesView').th
 const AuthorsView = lazy(() => import('./components/views/AuthorsView').then(({ AuthorsView }) => ({ default: AuthorsView })));
 const PublishersView = lazy(() => import('./components/views/PublishersView').then(({ PublishersView }) => ({ default: PublishersView })));
 const InventoryView = lazy(() => import('./components/views/InventoryView').then(({ InventoryView }) => ({ default: InventoryView })));
+const RemindersView = lazy(() => import('./components/views/RemindersView').then(({ RemindersView }) => ({ default: RemindersView })));
 const ZebraPrinterView = lazy(() => import('./components/views/ZebraPrinterView').then(({ ZebraPrinterView }) => ({ default: ZebraPrinterView })));
 const ReportsView = lazy(() => import('./components/views/ReportsView').then(({ ReportsView }) => ({ default: ReportsView })));
 const NotificationsView = lazy(() => import('./components/views/NotificationsView').then(({ NotificationsView }) => ({ default: NotificationsView })));
@@ -146,6 +147,8 @@ export const AppContent: React.FC = () => {
         return <PublishersView />;
       case 'inventory':
         return <InventoryView />;
+      case 'reminders':
+        return <RemindersView />;
       case 'reports':
         return <ReportsView />;
       case 'recommendations':

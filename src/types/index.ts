@@ -278,6 +278,7 @@ export type ActiveNavTab =
   | 'authors'
   | 'publishers'
   | 'inventory'
+  | 'reminders'
   | 'reports'
   | 'recommendations'
   | 'notifications'

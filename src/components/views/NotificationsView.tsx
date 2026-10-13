@@ -9,8 +9,10 @@ import {
   FileText,
   Search,
   Filter,
-  Trash2
+  Trash2,
+  ArrowRight
 } from 'lucide-react';
+import { BetaBadge } from '../common/BetaBadge';
 
 export const NotificationsView: React.FC = () => {
   const {
@@ -38,17 +40,25 @@ export const NotificationsView: React.FC = () => {
             <span>Notification & Alert Center</span>
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Automated overdue alerts, book hold readiness notices, and system broadcast messages.
+            System notices and reservation updates. Live due-soon and overdue follow-up is available in the reminders Beta; no email or SMS is sent automatically.
           </p>
         </div>
 
-        <button
-          onClick={markAllNotificationsAsRead}
-          className="px-4 py-2 text-xs font-bold text-maroon-800 dark:text-gold-400 bg-maroon-50 dark:bg-maroon-950/60 hover:bg-maroon-100 border border-maroon-200 dark:border-maroon-800 rounded-xl transition flex items-center gap-1.5 self-start sm:self-auto"
-        >
-          <CheckCheck className="w-4 h-4" />
-          <span>Mark All Read</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setActiveTab('reminders')}
+            className="px-4 py-2 text-xs font-bold text-amber-900 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 border border-amber-200 dark:border-amber-800 rounded-xl transition flex items-center gap-1.5"
+          >
+            <span>Overdue & renewal</span><BetaBadge /><ArrowRight className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={markAllNotificationsAsRead}
+            className="px-4 py-2 text-xs font-bold text-maroon-800 dark:text-gold-400 bg-maroon-50 dark:bg-maroon-950/60 hover:bg-maroon-100 border border-maroon-200 dark:border-maroon-800 rounded-xl transition flex items-center gap-1.5 self-start sm:self-auto"
+          >
+            <CheckCheck className="w-4 h-4" />
+            <span>Mark All Read</span>
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
