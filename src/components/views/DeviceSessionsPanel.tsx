@@ -19,10 +19,20 @@ type DeviceSession = {
   is_online: boolean;
 };
 
+const getSessionErrorMessage = (error: unknown) => {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+  return 'The live session service did not return data. Try refreshing the list.';
+};
+
 const formatLastSeen = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Unknown';
-  const minutes = Math.floor((Date.now() - date.getTime()) / 60_000);
+  const elapsedMs = Date.now() - date.getTime();
+  if (elapsedMs < 0) return date.toLocaleString();
+  const minutes = Math.floor(elapsedMs / 60_000);
   if (minutes < 1) return 'Just now';
   if (minutes < 60) return `${minutes} min${minutes === 1 ? '' : 's'} ago`;
   if (minutes < 24 * 60) return `${Math.floor(minutes / 60)} hr${Math.floor(minutes / 60) === 1 ? '' : 's'} ago`;
@@ -35,6 +45,7 @@ export const DeviceSessionsPanel: React.FC = () => {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -42,7 +53,16 @@ export const DeviceSessionsPanel: React.FC = () => {
     const loadSessions = async (silent: boolean) => {
       const supabase = getSupabase();
       if (!supabase || !isSupabaseConfigured) {
-        if (mounted) setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+          if (!isSupabaseConfigured) {
+            setSessions([]);
+            setCurrentSessionId(null);
+            setLoadError(null);
+          } else {
+            setLoadError('The configured Supabase session service could not be initialized.');
+          }
+        }
         return;
       }
       if (!silent && mounted) setIsRefreshing(true);
@@ -55,14 +75,19 @@ export const DeviceSessionsPanel: React.FC = () => {
         if (mounted) {
           setSessions((data || []) as DeviceSession[]);
           setCurrentSessionId(currentId);
+          setLoadError(null);
         }
       } catch (error) {
-        if (!silent && mounted) {
-          addToast({
-            type: 'error',
-            title: 'Could not load device sessions',
-            message: error instanceof Error ? error.message : 'Try refreshing the list.',
-          });
+        if (mounted) {
+          const message = getSessionErrorMessage(error);
+          setLoadError(message);
+          if (!silent) {
+            addToast({
+              type: 'error',
+              title: 'Could not load device sessions',
+              message,
+            });
+          }
         }
       } finally {
         if (mounted) {
@@ -109,10 +134,41 @@ export const DeviceSessionsPanel: React.FC = () => {
       message: `${session.user_name} · ${session.device_name}`,
     });
     const { data, error: listError } = await supabase.rpc('list_library_device_sessions');
-    if (!listError) setSessions((data || []) as DeviceSession[]);
+    if (listError) {
+      const message = getSessionErrorMessage(listError);
+      setLoadError(message);
+      addToast({ type: 'error', title: 'Could not refresh the session list', message });
+    } else {
+      setSessions((data || []) as DeviceSession[]);
+      setLoadError(null);
+    }
   };
 
-  const onlineCount = sessions.filter((session) => session.is_online).length;
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    const supabase = getSupabase();
+    if (!supabase) {
+      const message = 'The configured Supabase session service could not be initialized.';
+      setLoadError(message);
+      setIsRefreshing(false);
+      return;
+    }
+    Promise.all([supabase.rpc('list_library_device_sessions'), getCurrentAuthSessionId()])
+      .then(([result, currentId]) => {
+        if (result.error) throw result.error;
+        setSessions((result.data || []) as DeviceSession[]);
+        setCurrentSessionId(currentId);
+        setLoadError(null);
+      })
+      .catch((error) => {
+        const message = getSessionErrorMessage(error);
+        setLoadError(message);
+        addToast({ type: 'error', title: 'Could not refresh sessions', message });
+      })
+      .finally(() => setIsRefreshing(false));
+  };
+
+  const recentlyActiveCount = sessions.filter((session) => session.is_online).length;
   const isAdmin = currentUser.permissions.includes('manage_users');
 
   return (
@@ -128,16 +184,7 @@ export const DeviceSessionsPanel: React.FC = () => {
         </div>
         <button
           type="button"
-          onClick={() => {
-            setIsRefreshing(true);
-            const supabase = getSupabase();
-            if (!supabase) return setIsRefreshing(false);
-            Promise.all([supabase.rpc('list_library_device_sessions'), getCurrentAuthSessionId()]).then(([result, currentId]) => {
-              if (result.error) throw result.error;
-              setSessions((result.data || []) as DeviceSession[]);
-              setCurrentSessionId(currentId);
-            }).catch((error) => addToast({ type: 'error', title: 'Could not refresh sessions', message: error instanceof Error ? error.message : 'Try again.' })).finally(() => setIsRefreshing(false));
-          }}
+          onClick={handleRefresh}
           disabled={isRefreshing || !isSupabaseConfigured}
           className="inline-flex min-h-9 items-center gap-2 border border-library-border px-3 text-xs font-semibold text-library-main transition hover:bg-library-bg disabled:opacity-50"
         >
@@ -145,17 +192,27 @@ export const DeviceSessionsPanel: React.FC = () => {
         </button>
       </div>
 
+      {loadError && sessions.length > 0 && (
+        <p role="alert" className="border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-library-main">
+          Live session data could not be refreshed. Showing the last successfully retrieved results. {loadError}
+        </p>
+      )}
+
       {!isSupabaseConfigured ? (
         <p className="border border-library-border bg-library-bg p-3 text-xs text-library-muted">Live device management requires the connected Supabase sign-in service.</p>
       ) : isLoading ? (
         <p role="status" className="border border-library-border bg-library-bg p-3 text-xs text-library-muted">Loading device sessions…</p>
+      ) : loadError && sessions.length === 0 ? (
+        <p role="alert" className="border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-library-main">
+          Live device-session data is unavailable, so no session list can be shown. {loadError}
+        </p>
       ) : sessions.length === 0 ? (
-        <p className="border border-library-border bg-library-bg p-3 text-xs text-library-muted">No sign-in sessions were returned for this account.</p>
+        <p className="border border-library-border bg-library-bg p-3 text-xs text-library-muted">No sign-in sessions were returned by the live session service.</p>
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2 text-xs text-library-muted">
-            <span className="inline-flex items-center gap-1.5 border border-library-border px-2.5 py-1">
-              <Wifi className="h-3.5 w-3.5" /> {onlineCount} online now
+            <span className="inline-flex items-center gap-1.5 border border-library-border px-2.5 py-1" title="Recorded session activity within the last two minutes">
+              <Wifi className="h-3.5 w-3.5" /> {recentlyActiveCount} active recently
             </span>
             <span>{sessions.length} recent session{sessions.length === 1 ? '' : 's'}</span>
           </div>
@@ -163,11 +220,14 @@ export const DeviceSessionsPanel: React.FC = () => {
             {sessions.map((session) => {
               const isCurrent = session.session_id === currentSessionId;
               const isPending = pendingSessionId === session.session_id;
-              const displayDevice = session.device_name === 'Previously signed-in device'
-                ? `${session.browser} · ${session.platform}`
-                : session.device_name;
+              const hasPlaceholderMetadata = session.device_name === 'Previously signed-in device'
+                || session.browser === 'Existing browser session'
+                || session.platform === 'Device details will update at next sign-in';
+              const displayDevice = hasPlaceholderMetadata
+                ? 'Device details unavailable'
+                : session.device_name || 'Unknown device';
               const statusText = session.status === 'active'
-                ? session.is_online ? 'Online now' : 'Session allowed · idle'
+                ? session.is_online ? 'Active recently' : 'Allowed · no recent heartbeat'
                 : session.status === 'signed_out' ? 'Signed out' : session.status[0].toUpperCase() + session.status.slice(1);
               return (
                 <article key={session.session_id} className="flex flex-col gap-3 border border-library-border bg-library-bg p-3.5 sm:flex-row sm:items-center sm:justify-between">
@@ -175,7 +235,7 @@ export const DeviceSessionsPanel: React.FC = () => {
                     <Laptop className="mt-0.5 h-4 w-4 shrink-0 text-library-muted" />
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate text-sm font-semibold text-library-main">{displayDevice || 'Unknown device'}</p>
+                        <p className="truncate text-sm font-semibold text-library-main">{displayDevice}</p>
                         {isCurrent && <span className="border border-library-border px-1.5 py-0.5 text-[10px] font-semibold text-library-main">This device</span>}
                       </div>
                       {isAdmin && <p className="mt-0.5 truncate text-xs text-library-muted">{session.user_name} · {session.user_email}</p>}
@@ -214,7 +274,7 @@ export const DeviceSessionsPanel: React.FC = () => {
       )}
 
       <p className="border-t border-library-border pt-3 text-[11px] leading-5 text-library-muted">
-        Online status updates about every 30 seconds. Pause or Block applies to this sign-in session, not every future sign-in; disable an account in Users to stop all sign-ins. The app stores browser/device details but no IP address.
+        Tracked sessions refresh their last-seen time about every 30 seconds. “Active recently” means the recorded last-seen time is within the past two minutes. Pause or Block applies to this sign-in session, not every future sign-in; disable an account in Users to stop all sign-ins. The app stores browser/device details but no IP address.
       </p>
     </section>
   );
