@@ -28,7 +28,7 @@ export const initialSettings: SystemSettings = {
   defaultStudentLoanDays: 14,
   defaultTeacherLoanDays: 30,
   defaultStaffLoanDays: 21,
-  maxStudentBooks: 3,
+  maxStudentBooks: 1,
   maxTeacherBooks: 7,
   maxStaffBooks: 5,
   finePerDayLkr: 10.0,

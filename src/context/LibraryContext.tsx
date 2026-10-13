@@ -17,6 +17,7 @@ import {
   ActiveNavTab,
   LabelQueueItem,
 } from '../types';
+import { getEffectiveBorrowLimit } from '../utils/loanLimits';
 import {
   initialBooks,
   initialMembers,
@@ -654,7 +655,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
                 department: profile.department || null,
                 email: cleanEmail,
                 phone: profile.phone || null,
-                max_borrow_limit: role === 'teacher' ? 7 : 3,
+                max_borrow_limit: role === 'teacher' ? 7 : Math.max(1, Number(settings.maxStudentBooks) || 1),
               });
               if (memberCreateError) {
                 return { success: false, message: `Your account is verified, but its library member record could not be created: ${memberCreateError.message}` };
@@ -753,7 +754,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
               department: userData.designation,
               email: cleanEmail,
               phone: userData.phone,
-              max_borrow_limit: userData.role === 'teacher' ? 7 : 3,
+              max_borrow_limit: userData.role === 'teacher' ? 7 : Math.max(1, Number(settings.maxStudentBooks) || 1),
             });
             if (memberSaveError) {
               return { success: false, message: `Your library profile was saved, but the borrower record could not be created: ${memberSaveError.message}` };
@@ -1210,8 +1211,9 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     const member = members.find((m) => m.id === memberId || m.admissionNo === memberId || m.memberId === memberId);
     if (!member) return { success: false, message: 'Member not found.' };
     if (member.status !== 'active') return { success: false, message: `Member account is ${member.status}. Cannot issue books.` };
-    if (member.currentlyBorrowedCount >= member.maxBorrowLimit) {
-      return { success: false, message: `Member has reached maximum borrowing limit (${member.maxBorrowLimit} books).` };
+    const maxBorrowLimit = getEffectiveBorrowLimit(member, settings.maxStudentBooks);
+    if (member.currentlyBorrowedCount >= maxBorrowLimit) {
+      return { success: false, message: `Member has reached maximum borrowing limit (${maxBorrowLimit} books).` };
     }
     if (member.unpaidFines > 100) {
       return { success: false, message: 'Outstanding fines must be cleared before another book can be issued.' };

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { StatusBadge } from '../common/StatusBadge';
+import { getEffectiveBorrowLimit } from '../../utils/loanLimits';
 import { Barcode } from '../common/Barcode';
 import {
   ArrowLeft,
@@ -29,6 +30,7 @@ interface MemberProfileViewProps {
 export const MemberProfileView: React.FC<MemberProfileViewProps> = ({ onBack }) => {
   const {
     members,
+    settings,
     selectedMemberId,
     circulation,
     reservations,
@@ -188,7 +190,7 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({ onBack }) 
               Active Loans
             </span>
             <div className="text-xl font-extrabold font-heading text-blue-300 mt-0.5">
-              {currentLoans.length} / {member.maxBorrowLimit}
+              {currentLoans.length} / {getEffectiveBorrowLimit(member, settings.maxStudentBooks)}
             </div>
           </div>
           <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">

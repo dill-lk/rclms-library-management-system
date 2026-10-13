@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
+import { getEffectiveBorrowLimit } from '../../utils/loanLimits';
 import { Search, UserRound, BookOpen, CalendarDays, Check, AlertCircle, ArrowRight, RotateCcw } from 'lucide-react';
 
 export const BorrowView: React.FC = () => {
@@ -25,7 +26,8 @@ export const BorrowView: React.FC = () => {
   }).slice(0, 8), [books, bookSearch]);
 
   const availableCopies = selectedBook?.copies?.filter((c: any) => c.status === 'available') || [];
-  const eligible = Boolean(selectedMember && selectedMember.status === 'active' && selectedMember.currentlyBorrowedCount < selectedMember.maxBorrowLimit && selectedMember.unpaidFines <= 100);
+  const effectiveMemberLimit = selectedMember ? getEffectiveBorrowLimit(selectedMember, settings.maxStudentBooks) : 0;
+  const eligible = Boolean(selectedMember && selectedMember.status === 'active' && selectedMember.currentlyBorrowedCount < effectiveMemberLimit && selectedMember.unpaidFines <= 100);
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + Math.max(1, Math.min(60, Number(customDays) || 1)));
   const dueDateText = dueDate.toISOString().split('T')[0];
@@ -83,7 +85,7 @@ export const BorrowView: React.FC = () => {
           <section className="rounded-2xl border border-neutral-800 bg-[#111113] p-5">
             <div className="mb-4 flex items-center gap-3"><div className="rounded-xl bg-white p-2 text-black"><UserRound className="h-4 w-4" /></div><div><h2 className="font-semibold text-white">Reader</h2><p className="text-xs text-neutral-500">Search by name, member ID, or admission number.</p></div></div>
             <div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-neutral-600" /><input value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} placeholder="Search reader..." className="w-full rounded-xl border border-neutral-700 bg-[#0b0b0c] py-2.5 pl-10 pr-3 text-sm text-white outline-none focus:border-white" />{memberSearch && <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border border-neutral-700 bg-[#171719] shadow-2xl">{memberResults.map((m) => <button type="button" key={m.id} onClick={() => chooseMember(m)} className="flex w-full items-center justify-between border-b border-neutral-800 px-4 py-3 text-left hover:bg-neutral-800"><span><span className="block text-sm font-semibold text-white">{m.name}</span><span className="text-xs text-neutral-500">{m.memberId} · {m.type}</span></span><ArrowRight className="h-4 w-4 text-neutral-500" /></button>)}</div>}</div>
-            {selectedMember && <div className={`mt-4 flex items-center justify-between rounded-xl border p-4 ${eligible ? 'border-neutral-700 bg-[#18181b]' : 'border-neutral-600 bg-[#1b1b1d]'}`}><div><p className="font-semibold text-white">{selectedMember.name}</p><p className="mt-1 text-xs text-neutral-500">{selectedMember.memberId} · {selectedMember.currentlyBorrowedCount}/{selectedMember.maxBorrowLimit} books out · LKR {selectedMember.unpaidFines.toFixed(2)} unpaid</p></div>{eligible ? <span className="rounded-full border border-neutral-600 px-2.5 py-1 text-[10px] font-bold uppercase text-neutral-300">Eligible</span> : <span className="flex items-center gap-1 text-xs text-neutral-300"><AlertCircle className="h-4 w-4" /> Not eligible</span>}</div>}
+            {selectedMember && <div className={`mt-4 flex items-center justify-between rounded-xl border p-4 ${eligible ? 'border-neutral-700 bg-[#18181b]' : 'border-neutral-600 bg-[#1b1b1d]'}`}><div><p className="font-semibold text-white">{selectedMember.name}</p><p className="mt-1 text-xs text-neutral-500">{selectedMember.memberId} · {selectedMember.currentlyBorrowedCount}/{effectiveMemberLimit} books out · LKR {selectedMember.unpaidFines.toFixed(2)} unpaid</p></div>{eligible ? <span className="rounded-full border border-neutral-600 px-2.5 py-1 text-[10px] font-bold uppercase text-neutral-300">Eligible</span> : <span className="flex items-center gap-1 text-xs text-neutral-300"><AlertCircle className="h-4 w-4" /> Not eligible</span>}</div>}
           </section>
 
           <section className="rounded-2xl border border-neutral-800 bg-[#111113] p-5">

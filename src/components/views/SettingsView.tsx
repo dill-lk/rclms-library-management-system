@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { DeviceSessionsPanel } from './DeviceSessionsPanel';
 import {
@@ -29,6 +29,11 @@ export const SettingsView: React.FC = () => {
 
   const [maxStudentBooks, setMaxStudentBooks] = useState(settings.maxStudentBooks);
   const [maxTeacherBooks, setMaxTeacherBooks] = useState(settings.maxTeacherBooks);
+
+  useEffect(() => {
+    setMaxStudentBooks(settings.maxStudentBooks);
+    setMaxTeacherBooks(settings.maxTeacherBooks);
+  }, [settings.maxStudentBooks, settings.maxTeacherBooks]);
 
   const [finePerDay, setFinePerDay] = useState(settings.finePerDayLkr);
   const [gracePeriod, setGracePeriod] = useState(settings.gracePeriodDays);
@@ -178,6 +183,8 @@ export const SettingsView: React.FC = () => {
               </label>
               <input
                 type="number"
+                min="1"
+                step="1"
                 value={maxStudentBooks}
                 onChange={(e) => setMaxStudentBooks(Number(e.target.value))}
                 className="w-full px-3 py-2 font-mono font-bold bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-900 dark:text-white"

@@ -378,7 +378,7 @@ CREATE TABLE IF NOT EXISTS public.members (
     phone TEXT,
     address TEXT,
     status TEXT NOT NULL DEFAULT 'active',
-    max_borrow_limit INTEGER NOT NULL DEFAULT 3,
+    max_borrow_limit INTEGER NOT NULL DEFAULT 1,
     joined_date DATE NOT NULL DEFAULT CURRENT_DATE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );

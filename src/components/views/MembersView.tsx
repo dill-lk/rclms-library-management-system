@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { StatusBadge } from '../common/StatusBadge';
+import { getEffectiveBorrowLimit } from '../../utils/loanLimits';
 import { Member, MemberType } from '../../types';
 import { Modal } from '../common/Modal';
 import {
@@ -25,6 +26,7 @@ import {
 export const MembersView: React.FC = () => {
   const {
     members,
+    settings,
     addMember,
     updateMember,
     deleteMember,
@@ -117,7 +119,7 @@ export const MembersView: React.FC = () => {
       joinedDate: new Date().toISOString().split('T')[0],
       expiryDate: `${new Date().getFullYear() + 3}-12-31`,
       status: 'active',
-      maxBorrowLimit: newMemberType === 'teacher' ? 7 : newMemberType === 'staff' ? 5 : 3,
+      maxBorrowLimit: newMemberType === 'teacher' ? 7 : newMemberType === 'staff' ? 5 : settings.maxStudentBooks,
     });
 
     setIsAddModalOpen(false);
@@ -337,14 +339,14 @@ export const MembersView: React.FC = () => {
                   <td className="align-top py-3 px-3 text-center">
                     <span
                       className={`font-mono font-bold ${
-                        member.currentlyBorrowedCount >= member.maxBorrowLimit
+                        member.currentlyBorrowedCount >= getEffectiveBorrowLimit(member, settings.maxStudentBooks)
                           ? 'text-red-600'
                           : 'text-gray-800 dark:text-gray-200'
                       }`}
                     >
                       {member.currentlyBorrowedCount}
                     </span>
-                    <span className="text-gray-400 font-mono"> / {member.maxBorrowLimit}</span>
+                    <span className="text-gray-400 font-mono"> / {getEffectiveBorrowLimit(member, settings.maxStudentBooks)}</span>
                     {member.overdueCount > 0 && (
                       <span className="block text-[10px] text-red-600 font-bold">
                         ({member.overdueCount} Overdue)

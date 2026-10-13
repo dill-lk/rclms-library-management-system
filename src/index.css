@@ -125,7 +125,7 @@ svg { flex-shrink: 0; }
 .app-main .bg-indigo-700,
 .app-main .bg-maroon-700 { background-color: var(--action-light) !important; color: var(--action-ink) !important; }
 .app-main .hover\:bg-indigo-800:hover,
-.app-main .hover\:bg-indigo-700:hover { background-color: #FFFFFF !important; }
+.app-main .hover\:bg-indigo-700:hover { background-color: var(--action-light) !important; color: var(--action-ink) !important; }
 .app-main .bg-indigo-50,
 .app-main .bg-indigo-100,
 .app-main .bg-cyan-50,
@@ -510,6 +510,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   border-color: var(--border-color) !important;
 }
 .app-shell .catalogue-table tbody tr:hover { background-color: var(--border-color) !important; }
+
+/* Keep legacy table rows readable when their light-mode hover utilities are active. */
+.app-shell table tbody tr:hover,
+.app-shell table tbody tr:hover > td {
+  background-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
 
 /* Balanced desktop sign-in; compact mobile sign-in, with square controls and no badge art. */
 .login-topbar { max-width: 58rem !important; padding-top: .75rem !important; padding-bottom: .75rem !important; }
