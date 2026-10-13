@@ -5,6 +5,8 @@ import { Book } from '../../types';
 import { AddCopyModal } from './AddCopyModal';
 import { CatalogueImportModal } from './CatalogueImportModal';
 import { DuplicateReviewModal } from './DuplicateReviewModal';
+import { PermanentlyDeleteArchivedBookModal } from './PermanentlyDeleteArchivedBookModal';
+import { getCatalogueMetrics } from '../../utils/catalogueMetrics';
 import {
   Search,
   Filter,
@@ -61,10 +63,12 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showDuplicateReview, setShowDuplicateReview] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [bookToPermanentlyDelete, setBookToPermanentlyDelete] = useState<Book | null>(null);
 
   const isStaff = currentUser.role === 'super_admin' || currentUser.role === 'librarian' || currentUser.role === 'assistant_librarian';
   const canManageDuplicates = currentUser.permissions.includes('delete_books');
   const itemsPerPage = 8;
+  const catalogueMetrics = useMemo(() => getCatalogueMetrics(books), [books]);
 
   // Sync if catalogFilter changes
   useEffect(() => {
@@ -163,14 +167,16 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-bold font-heading text-neutral-900">
-              Books Collection
+              {showArchived ? 'Archived Records' : 'Books Collection'}
             </h2>
-            <span className="text-xs bg-neutral-100 text-neutral-950 font-bold px-2 py-0.5 rounded-full">
-              {books.filter((book) => !book.isArchived).length} Titles ({books.filter((book) => !book.isArchived).reduce((acc, b) => acc + (b.totalCopies || 0), 0)} Copies)
-            </span>
+            {!showArchived && <span className="text-xs bg-indigo-50 text-indigo-800 font-bold px-2.5 py-1 rounded-full border border-indigo-100">
+              {catalogueMetrics.activeTitles} active titles · {catalogueMetrics.activePhysicalCopies} active copies
+            </span>}
           </div>
           <p className="text-xs text-neutral-500 mt-0.5">
-            Manage, classify, and track all physical books, past papers, and reference volumes.
+            {showArchived
+              ? 'Restore an archived record, or permanently delete it here without archiving it again.'
+              : `${catalogueMetrics.totalPhysicalCopies} physical copies recorded in total · ${catalogueMetrics.archivedTitles} archived titles hold ${catalogueMetrics.archivedPhysicalCopies} copies.`}
           </p>
         </div>
 
@@ -236,7 +242,7 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
           {isStaff && (
             <button
               onClick={onAddBook}
-              className="px-4 py-2 text-xs font-bold text-white bg-neutral-50 hover:bg-neutral-100 rounded-xl shadow-md transition flex items-center gap-1.5"
+              className="px-4 py-2 text-xs font-bold text-white bg-maroon-700 hover:bg-maroon-800 rounded-xl shadow-sm transition flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
               <span>Add New Book</span>
@@ -250,7 +256,7 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
         <div className="flex flex-col md:flex-row items-center justify-between gap-3">
           {/* Live Search input */}
           <div className="relative w-full md:w-96">
-            <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -tranneutral-y-1/2" />
+            <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
@@ -264,7 +270,7 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -tranneutral-y-1/2 text-neutral-400 hover:text-neutral-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -392,7 +398,7 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
               {showArchived ? 'No Archived Titles' : books.filter((book) => !book.isArchived).length === 0 ? 'Library Collection is Empty' : 'No Matching Titles Found'}
             </h3>
             <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-              {showArchived ? 'Archived titles appear here and can be restored to the active catalogue.' : books.filter((book) => !book.isArchived).length === 0
+              {showArchived ? 'Archived titles appear here and can be restored or permanently deleted, one record at a time.' : books.filter((book) => !book.isArchived).length === 0
                 ? 'Get started by creating your categories and cataloging your first physical book title.'
                 : 'No books match the active search query and filter criteria.'}
             </p>
@@ -475,7 +481,9 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
 
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
-                          <StatusBadge status={isAvailable ? 'available' : 'borrowed'} size="sm" />
+                          {book.isArchived
+                            ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Archived</span>
+                            : <StatusBadge status={isAvailable ? 'available' : 'borrowed'} size="sm" />}
                           <span className="font-mono text-[11px] font-bold text-neutral-700">
                             {book.availableCopies} / {book.totalCopies}
                           </span>
@@ -531,18 +539,21 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
                                     deleteBook(book.id);
                                   }
                                 }}
-                                className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition"
-                                title="Remove from catalogue"
+                                className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-700 hover:bg-indigo-50 transition"
+                                title="Archive record — it can be restored"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Archive className="w-4 h-4" />
                               </button>}
                             </>
                           )}
-                          {isStaff && book.isArchived && (
+                          {isStaff && book.isArchived && <>
                             <button onClick={() => restoreBook(book.id)} className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2.5 py-1.5 text-[11px] font-bold text-emerald-800 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-200" title="Restore to active catalogue">
                               <RotateCcw className="h-3.5 w-3.5" /> Restore
                             </button>
-                          )}
+                            <button disabled={!canManageDuplicates} onClick={() => setBookToPermanentlyDelete(book)} className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-rose-900 dark:text-rose-200" title="Delete this archived record permanently">
+                              <Trash2 className="h-3.5 w-3.5" /> Delete permanently
+                            </button>
+                          </>}
                         </div>
                       </td>
                     </tr>
@@ -554,26 +565,28 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
         </div>
       ) : (
         /* GRID / CARD VIEW */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {paginatedBooks.map((book) => {
             const isAvailable = book.availableCopies > 0;
             const firstCopyBarcode = book.copies?.[0]?.barcode || book.isbn;
             return (
               <div
                 key={book.id}
-                className="bg-white border border-neutral-200 rounded-2xl p-4 shadow-xs hover:shadow-card hover:border-neutral-300 transition duration-200 flex flex-col justify-between group"
+                className="bg-white border border-neutral-200 rounded-2xl p-4 shadow-subtle hover:shadow-card hover:border-indigo-200 transition duration-200 flex flex-col justify-between group"
               >
                 <div>
                   {/* Top Cover Banner */}
-                  <div className="h-32 rounded-xl bg-gradient-to-br from-[#8B0000] to-[#500000] text-white p-3 relative overflow-hidden flex flex-col justify-between shadow-inner">
+                  <div className="h-32 rounded-xl bg-gradient-to-br from-indigo-700 via-indigo-600 to-cyan-600 text-white p-3 relative overflow-hidden flex flex-col justify-between shadow-inner">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono bg-black/40 text-neutral-700 px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-mono bg-slate-950/25 text-white/90 px-2 py-0.5 rounded">
                         {book.language}
                       </span>
-                      <StatusBadge status={isAvailable ? 'available' : 'borrowed'} size="sm" />
+                      {book.isArchived
+                        ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Archived</span>
+                        : <StatusBadge status={isAvailable ? 'available' : 'borrowed'} size="sm" />}
                     </div>
                     <div>
-                      <span className="text-[9px] font-mono text-neutral-700 uppercase tracking-widest block">
+                      <span className="text-[9px] font-mono text-white/70 uppercase tracking-widest block">
                         RAHULA COLLEGE
                       </span>
                       <h4 className="text-xs font-bold text-white line-clamp-2 leading-snug">
@@ -638,11 +651,14 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
                   >
                     <Printer className="w-4 h-4" />
                   </button>}
-                  {isStaff && book.isArchived && (
+                  {isStaff && book.isArchived && <>
                     <button onClick={() => restoreBook(book.id)} className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2.5 py-1.5 text-[11px] font-bold text-emerald-800 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-200" title="Restore to active catalogue">
                       <RotateCcw className="h-3.5 w-3.5" />Restore
                     </button>
-                  )}
+                    <button disabled={!canManageDuplicates} onClick={() => setBookToPermanentlyDelete(book)} className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-rose-900 dark:text-rose-200" title="Delete this archived record permanently">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </>}
                 </div>
               </div>
             );
@@ -695,6 +711,10 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
       <DuplicateReviewModal
         isOpen={showDuplicateReview}
         onClose={() => setShowDuplicateReview(false)}
+      />
+      <PermanentlyDeleteArchivedBookModal
+        book={bookToPermanentlyDelete}
+        onClose={() => setBookToPermanentlyDelete(null)}
       />
     </div>
   );

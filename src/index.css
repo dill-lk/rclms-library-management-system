@@ -4,30 +4,34 @@
 
 :root {
   color-scheme: light;
-  --ink: #2d201f;
-  --ink-soft: #645552;
-  --ink-muted: #857976;
-  --page: #f7f4ef;
+  --ink: #172033;
+  --ink-soft: #52637a;
+  --ink-muted: #728198;
+  --page: #f3f6fb;
   --surface: #ffffff;
-  --surface-2: #fbf8f4;
-  --surface-3: #f2ebe5;
-  --line: #e7ddd4;
-  --line-strong: #cdbeb4;
-  --focus: #8b0000;
+  --surface-2: #f8fafc;
+  --surface-3: #eef3f9;
+  --line: #dce4ee;
+  --line-strong: #c5d2e1;
+  --focus: #4f46e5;
+  --brand: #4f46e5;
+  --accent: #0891b2;
 }
 
 .dark {
   color-scheme: dark;
-  --ink: #f5eee7;
-  --ink-soft: #d0c1b9;
-  --ink-muted: #a4948c;
-  --page: #171312;
-  --surface: #211b19;
-  --surface-2: #2a2220;
-  --surface-3: #382c29;
-  --line: #453733;
-  --line-strong: #6a5750;
-  --focus: #edbd63;
+  --ink: #edf3fb;
+  --ink-soft: #c0cede;
+  --ink-muted: #91a2b8;
+  --page: #0d1522;
+  --surface: #141f2e;
+  --surface-2: #1a293b;
+  --surface-3: #22334a;
+  --line: #2b3a4e;
+  --line-strong: #40546d;
+  --focus: #67e8f9;
+  --brand: #818cf8;
+  --accent: #67e8f9;
 }
 
 * { box-sizing: border-box; }
@@ -67,13 +71,13 @@ input::placeholder, textarea::placeholder { color: var(--ink-muted); opacity: 1;
 option { background: var(--surface); color: var(--ink); }
 svg { flex-shrink: 0; }
 
-::selection { background: #8b0000; color: #fff; }
-.dark ::selection { background: #edbd63; color: #211b19; }
+::selection { background: #4f46e5; color: #fff; }
+.dark ::selection { background: #67e8f9; color: #0d1522; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: var(--page); }
-::-webkit-scrollbar-thumb { background: #b8a59a; border-radius: 999px; }
-.dark ::-webkit-scrollbar-thumb { background: #69564e; }
-::-webkit-scrollbar-thumb:hover { background: #8b756a; }
+::-webkit-scrollbar-thumb { background: #c0ccda; border-radius: 999px; }
+.dark ::-webkit-scrollbar-thumb { background: #40546d; }
+::-webkit-scrollbar-thumb:hover { background: #91a2b8; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }

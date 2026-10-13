@@ -159,37 +159,38 @@ export const LoginView: React.FC = () => {
 
       {/* Main sign-in workspace */}
       <div className="w-full max-w-5xl mx-auto flex-1 py-8 lg:py-12 grid min-w-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] gap-8 items-center">
-        <div className="relative isolate hidden min-h-[34rem] h-full flex-col justify-between overflow-hidden rounded-3xl border border-maroon-900/40 bg-gradient-to-br from-[#45111a] via-[#7f182b] to-[#421b23] p-9 text-white shadow-elevated lg:flex xl:p-10">
-          <div aria-hidden="true" className="absolute -right-24 -top-24 h-80 w-80 rounded-full border-[34px] border-gold-300/10" />
-          <div aria-hidden="true" className="absolute -bottom-28 -left-20 h-72 w-72 rounded-full border-[28px] border-white/[0.06]" />
-          <div aria-hidden="true" className="absolute inset-0 opacity-[0.12] [background-image:radial-gradient(#f6d58a_0.7px,transparent_0.7px)] [background-size:18px_18px]" />
+        <div className="relative isolate hidden min-h-[34rem] h-full flex-col justify-between overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-[#eef2ff] via-white to-[#ecfeff] p-9 text-slate-900 shadow-card lg:flex xl:p-10">
+          <div aria-hidden="true" className="absolute -right-24 -top-24 h-80 w-80 rounded-full border-[34px] border-indigo-300/30" />
+          <div aria-hidden="true" className="absolute -bottom-28 -left-20 h-72 w-72 rounded-full border-[28px] border-cyan-300/25" />
+          <div aria-hidden="true" className="absolute inset-0 opacity-[0.45] [background-image:radial-gradient(#6366f1_0.7px,transparent_0.7px)] [background-size:20px_20px]" />
           <div className="relative">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-gold-200/30 bg-gold-200/10 text-gold-200"><span className="font-heading text-lg font-bold">R</span></div>
-              <div><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gold-200">Rahula College</p><p className="mt-0.5 text-xs text-white/65">Matara · Library & resource centre</p></div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-indigo-200 bg-white text-indigo-700 shadow-sm"><span className="font-heading text-lg font-bold">R</span></div>
+              <div><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-indigo-700">Rahula College</p><p className="mt-0.5 text-xs text-slate-500">Matara · Library & resource centre</p></div>
             </div>
-            <h2 className="mt-10 max-w-lg text-4xl font-bold leading-tight tracking-tight xl:text-[2.7rem]">A thoughtful home for every book.</h2>
-            <p className="mt-4 max-w-md text-sm leading-6 text-white/75">Keep the catalogue accurate, the circulation desk moving, and every physical copy easy to find.</p>
+            <p className="mt-10 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-700"><span className="h-1.5 w-1.5 rounded-full bg-cyan-500" />Library operations</p>
+            <h2 className="mt-4 max-w-lg text-4xl font-bold leading-tight tracking-tight xl:text-[2.7rem]">Every title, copy, and loan—easy to find.</h2>
+            <p className="mt-4 max-w-md text-sm leading-6 text-slate-600">A calm, connected workspace for keeping the catalogue accurate and the circulation desk moving.</p>
 
-            <div className="mt-10 rounded-2xl border border-white/15 bg-white/[0.08] p-5 backdrop-blur-sm">
+            <div className="mt-9 rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur-sm">
               <div className="flex items-center justify-between gap-3">
-                <div><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-200">At a glance</p><p className="mt-1 text-sm font-semibold text-white">From shelf to circulation</p></div>
-                <span className="rounded-full border border-gold-200/30 bg-gold-200/10 px-3 py-1 text-[10px] font-semibold text-gold-100">One workspace</span>
+                <div><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-indigo-700">One clear view</p><p className="mt-1 text-sm font-semibold text-slate-900">From shelf to circulation</p></div>
+                <span className="rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-[10px] font-semibold text-cyan-800">Connected workspace</span>
               </div>
               <div className="mt-5 flex h-16 items-end gap-2" aria-hidden="true">
-                <span className="h-7 flex-1 rounded-t-md bg-gold-200/50" /><span className="h-12 flex-1 rounded-t-md bg-white/65" /><span className="h-9 flex-1 rounded-t-md bg-gold-200/75" /><span className="h-14 flex-1 rounded-t-md bg-white/75" /><span className="h-11 flex-1 rounded-t-md bg-gold-200/55" /><span className="h-16 flex-1 rounded-t-md bg-white/90" />
+                <span className="h-7 flex-1 rounded-t-md bg-indigo-300" /><span className="h-12 flex-1 rounded-t-md bg-cyan-300" /><span className="h-9 flex-1 rounded-t-md bg-indigo-400" /><span className="h-14 flex-1 rounded-t-md bg-sky-300" /><span className="h-11 flex-1 rounded-t-md bg-cyan-400" /><span className="h-16 flex-1 rounded-t-md bg-indigo-600" />
               </div>
-              <div className="mt-3 flex items-center justify-between text-[10px] font-medium text-white/60"><span>Catalogue</span><span>Loans</span><span>Returns</span><span>Members</span></div>
+              <div className="mt-3 flex items-center justify-between text-[10px] font-medium text-slate-500"><span>Catalogue</span><span>Loans</span><span>Returns</span><span>Members</span></div>
             </div>
           </div>
-          <div className="relative grid grid-cols-3 gap-3 text-xs text-white/70">
-            <div className="border-t border-gold-200/40 pt-3"><strong className="block text-white">Catalogue</strong>Titles and copies</div>
-            <div className="border-t border-white/25 pt-3"><strong className="block text-white">Circulation</strong>Loans and returns</div>
-            <div className="border-t border-white/25 pt-3"><strong className="block text-white">People</strong>Members and staff</div>
+          <div className="relative grid grid-cols-3 gap-3 text-xs text-slate-500">
+            <div className="border-t border-indigo-200 pt-3"><strong className="block text-slate-900">Catalogue</strong>Titles and copies</div>
+            <div className="border-t border-cyan-200 pt-3"><strong className="block text-slate-900">Circulation</strong>Loans and returns</div>
+            <div className="border-t border-slate-200 pt-3"><strong className="block text-slate-900">People</strong>Members and staff</div>
           </div>
         </div>
 
-      <div className="w-full min-w-0 max-w-md lg:max-w-none mx-auto bg-white border border-neutral-200 rounded-2xl shadow-sm p-6 sm:p-8 space-y-6 self-center">
+      <div className="w-full min-w-0 max-w-md lg:max-w-none mx-auto bg-white border border-slate-200 rounded-3xl shadow-card p-6 sm:p-8 space-y-6 self-center">
         {/* Header Branding */}
         <div className="text-center space-y-3">
           <div className="w-20 h-20 mx-auto rounded-2xl bg-neutral-50 border border-neutral-200 flex items-center justify-center p-2">
@@ -253,7 +254,7 @@ export const LoginView: React.FC = () => {
                   placeholder="name@rahulacollege.lk"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs placeholder:text-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-neutral-950 focus:border-neutral-950 transition"
+                  className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs placeholder:text-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                 />
                 <Mail className="w-4 h-4 text-neutral-500 absolute left-3.5 top-3" />
               </div>
@@ -284,7 +285,7 @@ export const LoginView: React.FC = () => {
                   placeholder="••••••••"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs placeholder:text-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-neutral-950 focus:border-neutral-950 transition"
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs placeholder:text-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                 />
                 <Lock className="w-4 h-4 text-neutral-500 absolute left-3.5 top-3" />
                 <button
@@ -309,7 +310,7 @@ export const LoginView: React.FC = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white font-bold text-xs tracking-wide shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-3 rounded-xl bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs tracking-wide shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <span>{isSubmitting ? 'Signing in...' : 'Sign In'}</span>
               <ArrowRight className="w-4 h-4" />
@@ -332,7 +333,7 @@ export const LoginView: React.FC = () => {
                   placeholder="e.g. Kasun Perera"
                   value={signupName}
                   onChange={(e) => setSignupName(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-neutral-950"
+                  className="w-full pl-10 pr-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-indigo-500"
                 />
                 <User className="w-4 h-4 text-neutral-500 absolute left-3.5 top-2.5" />
               </div>
@@ -344,7 +345,7 @@ export const LoginView: React.FC = () => {
                 <select
                   value={signupRole}
                   onChange={(e) => setSignupRole(e.target.value as UserRole)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-neutral-950"
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="student">Student (ශිෂ්‍ය)</option>
                   <option value="teacher">Teacher (ගුරුභවතා)</option>
@@ -360,7 +361,7 @@ export const LoginView: React.FC = () => {
                   placeholder="e.g. 23456"
                   value={signupAdmissionNo}
                   onChange={(e) => setSignupAdmissionNo(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs font-mono focus:ring-2 focus:ring-neutral-950"
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs font-mono focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
             </div>
@@ -377,7 +378,7 @@ export const LoginView: React.FC = () => {
                   placeholder="name@example.com"
                   value={signupEmail}
                   onChange={(e) => setSignupEmail(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-neutral-950"
+                  className="w-full pl-10 pr-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-indigo-500"
                 />
                 <Mail className="w-4 h-4 text-neutral-500 absolute left-3.5 top-2.5" />
               </div>
@@ -392,7 +393,7 @@ export const LoginView: React.FC = () => {
                   placeholder="Min 6 characters"
                   value={signupPassword}
                   onChange={(e) => setSignupPassword(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-neutral-950"
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -404,7 +405,7 @@ export const LoginView: React.FC = () => {
                   placeholder="Re-enter"
                   value={signupConfirmPass}
                   onChange={(e) => setSignupConfirmPass(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-neutral-950"
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
             </div>
@@ -477,7 +478,7 @@ export const LoginView: React.FC = () => {
                     placeholder="name@rahulacollege.lk"
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-neutral-950"
+                    className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
 
@@ -525,7 +526,7 @@ export const LoginView: React.FC = () => {
                   placeholder="e.g. S. P. Jayawardena"
                   value={adminName}
                   onChange={(e) => setAdminName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-neutral-950"
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -539,7 +540,7 @@ export const LoginView: React.FC = () => {
                   placeholder="administrator email"
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-neutral-950"
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -553,7 +554,7 @@ export const LoginView: React.FC = () => {
                   placeholder="Secure master password"
                   value={adminPass}
                   onChange={(e) => setAdminPass(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-neutral-950"
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -566,7 +567,7 @@ export const LoginView: React.FC = () => {
                   required
                   value={libName}
                   onChange={(e) => setLibName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-neutral-950"
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 

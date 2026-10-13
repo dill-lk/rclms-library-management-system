@@ -107,7 +107,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const { title, desc } = getPageTitle(activeTab);
 
   return (
-    <header className="sticky top-0 z-30 bg-white/80 dark:bg-[#111317]/80 backdrop-blur-md border-b border-neutral-200/80 dark:border-neutral-800 transition-colors duration-200">
+    <header className="sticky top-0 z-30 bg-white/90 dark:bg-[#141f2e]/90 backdrop-blur-xl border-b border-neutral-200/80 dark:border-neutral-800 transition-colors duration-200">
       <div className="px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Left: Mobile Toggle & Page Title */}
         <div className="flex items-center gap-3 min-w-0">
@@ -136,7 +136,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             className="w-full flex items-center justify-between px-3.5 py-2 text-xs bg-neutral-50 dark:bg-neutral-900/90 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-400 transition group"
           >
             <div className="flex items-center gap-2">
-              <Search className="w-4 h-4 text-neutral-400 group-hover:text-amber-400 transition-colors" />
+              <Search className="w-4 h-4 text-neutral-400 group-hover:text-cyan-600 transition-colors" />
               <span className="truncate">Search books, members, barcodes...</span>
             </div>
             <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium text-neutral-400 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded">
@@ -153,7 +153,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               onClick={() => setActiveTab('borrow')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition ${
                 activeTab === 'borrow'
-                  ? 'bg-red-900 text-white border-red-900 shadow-xs'
+                  ? 'bg-maroon-700 text-white border-maroon-700 shadow-xs'
                   : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300'
               }`}
             >
@@ -191,7 +191,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             </button>
 
             {isNotifOpen && (
-              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-[#14171F] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-[#141f2e] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="px-4 py-2 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-neutral-900 dark:text-white">Alerts</span>
@@ -275,7 +275,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center gap-2 p-1 pl-1.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-red-950 to-red-800 text-amber-300 flex items-center justify-center font-bold text-xs ring-1 ring-amber-400/40">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-700 to-cyan-700 text-white flex items-center justify-center font-bold text-xs ring-1 ring-cyan-300/60">
                 {currentUser.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
               </div>
               <div className="text-left hidden md:block">
@@ -289,7 +289,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             </button>
 
             {isProfileOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#14171F] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl py-2 z-50 divide-y divide-neutral-100 dark:divide-neutral-800 animate-in fade-in duration-150">
+              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#141f2e] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl py-2 z-50 divide-y divide-neutral-100 dark:divide-neutral-800 animate-in fade-in duration-150">
                 <div className="px-4 py-3">
                   <p className="text-xs font-bold text-neutral-900 dark:text-white truncate">
                     {currentUser.name}

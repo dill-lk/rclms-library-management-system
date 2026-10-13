@@ -1,5 +1,5 @@
 import React from 'react';
-import { LucideIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { LucideIcon, TrendingUp, TrendingDown, Minus, ArrowUpRight } from 'lucide-react';
 
 interface StatCardProps {
   label: string;
@@ -12,6 +12,16 @@ interface StatCardProps {
   onClick?: () => void;
 }
 
+const accents: Record<NonNullable<StatCardProps['color']>, { icon: string; bar: string }> = {
+  maroon: { icon: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300', bar: 'bg-indigo-500' },
+  gold: { icon: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300', bar: 'bg-cyan-500' },
+  emerald: { icon: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300', bar: 'bg-emerald-500' },
+  blue: { icon: 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300', bar: 'bg-blue-500' },
+  purple: { icon: 'bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300', bar: 'bg-violet-500' },
+  amber: { icon: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300', bar: 'bg-amber-500' },
+  rose: { icon: 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300', bar: 'bg-rose-500' },
+};
+
 export const StatCard: React.FC<StatCardProps> = ({
   label,
   value,
@@ -22,99 +32,32 @@ export const StatCard: React.FC<StatCardProps> = ({
   subtitle,
   onClick,
 }) => {
-  const colorMap = {
-    maroon: {
-      bg: 'bg-maroon-50 dark:bg-maroon-950/40',
-      icon: 'text-maroon-800 dark:text-gold-400',
-      border: 'border-maroon-100 dark:border-maroon-900/60',
-      hover: 'hover:border-maroon-300 dark:hover:border-maroon-700',
-    },
-    gold: {
-      bg: 'bg-gold-50 dark:bg-amber-950/40',
-      icon: 'text-amber-700 dark:text-gold-300',
-      border: 'border-gold-200 dark:border-amber-900/60',
-      hover: 'hover:border-gold-400 dark:hover:border-amber-600',
-    },
-    emerald: {
-      bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-      icon: 'text-emerald-700 dark:text-emerald-400',
-      border: 'border-emerald-100 dark:border-emerald-900/60',
-      hover: 'hover:border-emerald-300 dark:hover:border-emerald-700',
-    },
-    blue: {
-      bg: 'bg-blue-50 dark:bg-blue-950/40',
-      icon: 'text-blue-700 dark:text-blue-400',
-      border: 'border-blue-100 dark:border-blue-900/60',
-      hover: 'hover:border-blue-300 dark:hover:border-blue-700',
-    },
-    purple: {
-      bg: 'bg-purple-50 dark:bg-purple-950/40',
-      icon: 'text-purple-700 dark:text-purple-400',
-      border: 'border-purple-100 dark:border-purple-900/60',
-      hover: 'hover:border-purple-300 dark:hover:border-purple-700',
-    },
-    amber: {
-      bg: 'bg-amber-50 dark:bg-amber-950/40',
-      icon: 'text-amber-700 dark:text-amber-400',
-      border: 'border-amber-100 dark:border-amber-900/60',
-      hover: 'hover:border-amber-300 dark:hover:border-amber-700',
-    },
-    rose: {
-      bg: 'bg-rose-50 dark:bg-rose-950/40',
-      icon: 'text-rose-700 dark:text-rose-400',
-      border: 'border-rose-100 dark:border-rose-900/60',
-      hover: 'hover:border-rose-300 dark:hover:border-rose-700',
-    },
-  };
-
-  const theme = colorMap[color] || colorMap.maroon;
-
+  const accent = accents[color];
   return (
-    <div
+    <article
       onClick={onClick}
-      className={`bg-white dark:bg-slate-900 border ${theme.border} rounded-xl p-4 sm:p-5 shadow-xs transition duration-200 ${
-        onClick ? `cursor-pointer ${theme.hover} hover:shadow-card hover:-translate-y-0.5` : ''
-      }`}
+      onKeyDown={(event) => { if (onClick && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onClick(); } }}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      className={`group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-4 shadow-subtle transition duration-200 dark:border-slate-800 dark:bg-slate-900 sm:p-5 ${onClick ? 'cursor-pointer hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-card focus-visible:outline-2 focus-visible:outline-indigo-500' : ''}`}
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            {label}
-          </span>
-          <div className="text-2xl sm:text-3xl font-extrabold font-heading text-gray-900 dark:text-white mt-1">
-            {value}
-          </div>
+      <div className={`absolute inset-x-0 top-0 h-0.5 ${accent.bar}`} />
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">{label}</p>
+          <p className="mt-2 text-3xl font-bold leading-none tracking-tight text-slate-950 dark:text-white sm:text-[2rem]">{value}</p>
         </div>
-        <div className={`p-2.5 rounded-xl ${theme.bg} ${theme.icon} flex-shrink-0 shadow-2xs`}>
-          <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
-        </div>
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${accent.icon}`}><Icon className="h-5 w-5" /></span>
       </div>
-
       {(change || subtitle) && (
-        <div className="mt-3.5 flex items-center gap-2 text-xs">
-          {change && (
-            <span
-              className={`inline-flex items-center gap-0.5 font-bold px-1.5 py-0.5 rounded ${
-                trend === 'up'
-                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
-                  : trend === 'down'
-                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
-                  : 'bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-gray-300'
-              }`}
-            >
-              {trend === 'up' && <TrendingUp className="w-3 h-3" />}
-              {trend === 'down' && <TrendingDown className="w-3 h-3" />}
-              {trend === 'neutral' && <Minus className="w-3 h-3" />}
-              {change}
-            </span>
-          )}
-          {subtitle && (
-            <span className="text-gray-500 dark:text-gray-400 truncate text-[11px]">
-              {subtitle}
-            </span>
-          )}
+        <div className="mt-4 flex min-h-5 flex-wrap items-center gap-2 text-xs">
+          {change && <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${trend === 'up' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300' : trend === 'down' ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
+            {trend === 'up' ? <TrendingUp className="h-3 w-3" /> : trend === 'down' ? <TrendingDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}{change}
+          </span>}
+          {subtitle && <span className="min-w-0 flex-1 text-[11px] leading-4 text-slate-500 dark:text-slate-400">{subtitle}</span>}
+          {onClick && <ArrowUpRight className="ml-auto h-3.5 w-3.5 text-slate-400 transition group-hover:text-indigo-600" />}
         </div>
       )}
-    </div>
+    </article>
   );
 };

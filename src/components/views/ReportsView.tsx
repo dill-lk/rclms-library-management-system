@@ -8,9 +8,10 @@ import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from 'recharts';
+import { getCatalogueMetrics } from '../../utils/catalogueMetrics';
 
-const CHART_COLORS = ['#8b0000', '#d4a13b', '#527a69', '#657a9d', '#bc6f52', '#9475a5', '#6c8e9e'];
-const panelClass = 'rounded-2xl border border-neutral-200 bg-white p-5 shadow-subtle dark:border-neutral-800 dark:bg-[#14171F]';
+const CHART_COLORS = ['#4f46e5', '#06b6d4', '#10b981', '#6366f1', '#f97316', '#8b5cf6', '#14b8a6'];
+const panelClass = 'rounded-2xl border border-slate-200 bg-white p-5 shadow-subtle dark:border-slate-800 dark:bg-[#141f2e]';
 const compactNumber = new Intl.NumberFormat('en-LK');
 
 function parseDay(value?: string) {
@@ -30,8 +31,9 @@ function monthLabel(date: Date) {
 export const ReportsView: React.FC = () => {
   const { books, members, circulation, fines, addToast } = useLibrary();
   const [reportType, setReportType] = useState<'circulation' | 'catalog' | 'fines'>('circulation');
-  const activeBooks = useMemo(() => books.filter((book) => !book.isArchived), [books]);
-  const totalVolume = activeBooks.reduce((sum, book) => sum + (book.totalCopies || 0), 0);
+  const catalogue = useMemo(() => getCatalogueMetrics(books), [books]);
+  const activeBooks = catalogue.activeBooks;
+  const totalVolume = catalogue.activePhysicalCopies;
   const activeLoansCount = circulation.filter((item) => ['active', 'renewed'].includes(item.status)).length;
   const overdueCount = circulation.filter((item) => item.status === 'overdue').length;
   const returnedCount = circulation.filter((item) => item.status === 'returned').length;
@@ -78,6 +80,8 @@ export const ReportsView: React.FC = () => {
     const headers = 'Metric,Value,Status,Generated\n';
     const rows = [
       `Active catalogue copies,${totalVolume},Current,${new Date().toLocaleDateString()}`,
+      `Total physical-copy records,${catalogue.totalPhysicalCopies},Includes archived titles,${new Date().toLocaleDateString()}`,
+      `Copies on archived titles,${catalogue.archivedPhysicalCopies},Archived,${new Date().toLocaleDateString()}`,
       `Registered members,${members.length},Current,${new Date().toLocaleDateString()}`,
       `Active loans,${activeLoansCount},Issued,${new Date().toLocaleDateString()}`,
       `Overdue loans,${overdueCount},Overdue,${new Date().toLocaleDateString()}`,
@@ -101,17 +105,17 @@ export const ReportsView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <header className="relative overflow-hidden rounded-3xl border border-[#ead8c4] bg-gradient-to-r from-[#fffaf2] via-white to-[#f9eee7] p-6 shadow-subtle dark:border-neutral-800 dark:from-[#261a18] dark:via-[#1c1918] dark:to-[#271b18] sm:flex sm:items-center sm:justify-between">
-        <div className="absolute -right-8 -top-12 h-44 w-44 rounded-full border-[24px] border-[#8b0000]/[0.06]" />
+      <header className="relative overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-cyan-50 p-6 shadow-subtle dark:border-slate-800 dark:from-indigo-950/30 dark:via-slate-900 dark:to-cyan-950/20 sm:flex sm:items-center sm:justify-between">
+        <div className="absolute -right-8 -top-12 h-44 w-44 rounded-full border-[24px] border-indigo-500/[0.08]" />
         <div className="relative">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-maroon-700 dark:text-gold-300">Library intelligence</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-700 dark:text-cyan-300">Library intelligence</p>
           <h1 className="mt-1 flex items-center gap-2 text-2xl font-bold tracking-tight text-neutral-950 dark:text-white"><BarChart3 className="h-6 w-6 text-maroon-800 dark:text-gold-400" /> Analytics & reports</h1>
           <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">Explore circulation, collection mix, and fine balances from your library records.</p>
         </div>
-        <button onClick={handleExport} className="relative mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-maroon-800 px-4 py-2.5 text-sm font-bold text-white shadow-card transition hover:bg-maroon-900 sm:mt-0"><Download className="h-4 w-4" />Export CSV</button>
+        <button onClick={handleExport} className="relative mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-800 sm:mt-0"><Download className="h-4 w-4" />Export CSV</button>
       </header>
 
-      <nav aria-label="Analytics report type" className="flex flex-wrap gap-2 rounded-2xl border border-neutral-200 bg-white p-2 shadow-subtle dark:border-neutral-800 dark:bg-[#14171F]">
+      <nav aria-label="Analytics report type" className="flex flex-wrap gap-2 rounded-2xl border border-neutral-200 bg-white p-2 shadow-subtle dark:border-neutral-800 dark:bg-[#141f2e]">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setReportType(id)} aria-pressed={reportType === id} className={`inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${reportType === id ? 'bg-maroon-800 text-white shadow-sm dark:bg-maroon-700' : 'text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'}`}><Icon className="h-4 w-4" />{label}</button>
         ))}
@@ -123,7 +127,7 @@ export const ReportsView: React.FC = () => {
             { label: 'Active loans', value: activeLoansCount, detail: 'Currently checked out', icon: BookOpen, tone: 'text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-950/50' },
             { label: 'Overdue', value: overdueCount, detail: overdueCount ? 'Follow-up needed' : 'No overdue items', icon: TrendingUp, tone: 'text-rose-700 bg-rose-50 dark:text-rose-300 dark:bg-rose-950/50' },
             { label: 'Completed returns', value: returnedCount, detail: 'Recorded in circulation', icon: Receipt, tone: 'text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-950/50' },
-            { label: 'Members', value: members.length, detail: `${compactNumber.format(totalVolume)} physical copies`, icon: Users, tone: 'text-maroon-800 bg-maroon-50 dark:text-gold-300 dark:bg-maroon-950/50' },
+            { label: 'Members', value: members.length, detail: `${compactNumber.format(catalogue.totalPhysicalCopies)} total copy records`, icon: Users, tone: 'text-indigo-800 bg-indigo-50 dark:text-indigo-300 dark:bg-indigo-950/50' },
           ].map(({ label, value, detail, icon: Icon, tone }) => <article key={label} className={panelClass}><div className="flex items-start justify-between"><div><p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{label}</p><p className="mt-2 text-3xl font-bold tracking-tight text-neutral-950 dark:text-white">{compactNumber.format(value)}</p></div><span className={`rounded-xl p-2.5 ${tone}`}><Icon className="h-5 w-5" /></span></div><p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">{detail}</p></article>)}
         </section>
 
@@ -132,13 +136,13 @@ export const ReportsView: React.FC = () => {
             <div className="mb-4 flex items-start justify-between gap-4"><div><h2 className="text-base font-bold text-neutral-950 dark:text-white">Monthly circulation</h2><p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Issues and returns by recorded transaction date</p></div><span className="rounded-full bg-maroon-50 px-3 py-1 text-[11px] font-semibold text-maroon-800 dark:bg-maroon-950 dark:text-gold-300">Last 6 active months</span></div>
             <div className="h-72 w-full" role="img" aria-label="Bar chart comparing monthly issues and returns">
               <ResponsiveContainer width="100%" height="100%"><BarChart data={monthlyCirculation} margin={{ top: 8, right: 8, left: -16, bottom: 0 }} barGap={5}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8e2dc" />
-                <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: '#817671', fontSize: 11 }} />
-                <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#817671', fontSize: 11 }} />
-                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e7ddd4', boxShadow: '0 8px 20px #24140f18' }} />
+                <CartesianGrid strokeDasharray="4 5" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
+                <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #dce4ee', boxShadow: '0 8px 20px rgba(15,23,42,.08)' }} />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="issued" name="Issues" fill="#8b0000" radius={[5, 5, 0, 0]} maxBarSize={28} />
-                <Bar dataKey="returned" name="Returns" fill="#d4a13b" radius={[5, 5, 0, 0]} maxBarSize={28} />
+                <Bar dataKey="issued" name="Issues" fill="#4f46e5" radius={[5, 5, 0, 0]} maxBarSize={28} />
+                <Bar dataKey="returned" name="Returns" fill="#06b6d4" radius={[5, 5, 0, 0]} maxBarSize={28} />
               </BarChart></ResponsiveContainer>
             </div>
             {circulation.length === 0 && <p className="mt-2 text-center text-xs text-neutral-500">No circulation records yet; bars will appear as transactions are recorded.</p>}
@@ -147,38 +151,38 @@ export const ReportsView: React.FC = () => {
           <article className={panelClass}>
             <div><h2 className="text-base font-bold text-neutral-950 dark:text-white">Collection availability</h2><p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Available compared with currently unavailable copies</p></div>
             {categoryAvailability.length ? <div className="h-60 pt-3" role="img" aria-label="Pie chart showing collection availability">
-              <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={categoryAvailability} dataKey="value" nameKey="name" innerRadius={56} outerRadius={88} paddingAngle={4} stroke="none">{categoryAvailability.map((entry, index) => <Cell key={entry.name} fill={index === 0 ? '#d4a13b' : '#8b0000'} />)}</Pie><Tooltip /><Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} /></PieChart></ResponsiveContainer>
+              <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={categoryAvailability} dataKey="value" nameKey="name" innerRadius={56} outerRadius={88} paddingAngle={4} stroke="none">{categoryAvailability.map((entry, index) => <Cell key={entry.name} fill={index === 0 ? '#4f46e5' : '#06b6d4'} />)}</Pie><Tooltip /><Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} /></PieChart></ResponsiveContainer>
             </div> : <div className="flex h-60 flex-col items-center justify-center text-center"><Boxes className="h-8 w-8 text-neutral-300" /><p className="mt-2 text-sm font-semibold text-neutral-700 dark:text-neutral-200">No catalogue copies yet</p><p className="mt-1 text-xs text-neutral-500">Add titles and copies to see availability.</p></div>}
-            <div className="mt-2 grid grid-cols-2 gap-2 text-center"><div className="rounded-xl bg-gold-50 p-3 dark:bg-gold-900/20"><p className="text-[11px] text-neutral-500">Available</p><p className="mt-1 text-lg font-bold text-gold-700 dark:text-gold-300">{compactNumber.format(availableCopies)}</p></div><div className="rounded-xl bg-maroon-50 p-3 dark:bg-maroon-950/50"><p className="text-[11px] text-neutral-500">Unavailable</p><p className="mt-1 text-lg font-bold text-maroon-800 dark:text-maroon-200">{compactNumber.format(unavailableCopies)}</p></div></div>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-center"><div className="rounded-xl bg-indigo-50 p-3 dark:bg-indigo-950/50"><p className="text-[11px] text-neutral-500">Available active copies</p><p className="mt-1 text-lg font-bold text-indigo-700 dark:text-indigo-300">{compactNumber.format(availableCopies)}</p></div><div className="rounded-xl bg-cyan-50 p-3 dark:bg-cyan-950/40"><p className="text-[11px] text-neutral-500">Unavailable active copies</p><p className="mt-1 text-lg font-bold text-cyan-800 dark:text-cyan-300">{compactNumber.format(unavailableCopies)}</p></div></div>
           </article>
         </section>
 
         <section className={panelClass}>
           <div className="mb-4 flex items-center justify-between"><div><h2 className="text-base font-bold text-neutral-950 dark:text-white">Collection by subject</h2><p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Physical copy count across the largest categories</p></div><PieIcon className="h-5 w-5 text-maroon-700 dark:text-gold-400" /></div>
-          {categoryStats.length ? <div className="h-72" role="img" aria-label="Horizontal bar chart of copies per category"><ResponsiveContainer width="100%" height="100%"><BarChart data={categoryStats} layout="vertical" margin={{ top: 4, right: 20, left: 10, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8e2dc" /><XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#817671', fontSize: 11 }} /><YAxis type="category" dataKey="name" width={130} tickLine={false} axisLine={false} tick={{ fill: '#665a56', fontSize: 11 }} /><Tooltip /><Bar dataKey="copies" name="Copies" fill="#8b0000" radius={[0, 5, 5, 0]}>{categoryStats.map((entry, index) => <Cell key={entry.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}</Bar></BarChart></ResponsiveContainer></div> : <p className="rounded-xl bg-neutral-50 py-10 text-center text-sm text-neutral-500 dark:bg-neutral-900">No categories or titles have been added yet.</p>}
+          {categoryStats.length ? <div className="h-72" role="img" aria-label="Horizontal bar chart of copies per category"><ResponsiveContainer width="100%" height="100%"><BarChart data={categoryStats} layout="vertical" margin={{ top: 4, right: 20, left: 10, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" /><XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} /><YAxis type="category" dataKey="name" width={130} tickLine={false} axisLine={false} tick={{ fill: '#475569', fontSize: 11 }} /><Tooltip /><Bar dataKey="copies" name="Copies" fill="#4f46e5" radius={[0, 5, 5, 0]}>{categoryStats.map((entry, index) => <Cell key={entry.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}</Bar></BarChart></ResponsiveContainer></div> : <p className="rounded-xl bg-neutral-50 py-10 text-center text-sm text-neutral-500 dark:bg-neutral-900">No categories or titles have been added yet.</p>}
         </section>
       </>}
 
       {reportType === 'catalog' && <section className="grid gap-5 xl:grid-cols-2">
         <article className={panelClass}>
           <div className="mb-4 flex items-center justify-between"><div><h2 className="text-base font-bold text-neutral-950 dark:text-white">Titles by category</h2><p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Ranked by physical copies on the shelf</p></div><Boxes className="h-5 w-5 text-maroon-700 dark:text-gold-400" /></div>
-          {categoryStats.length ? <div className="h-80" role="img" aria-label="Horizontal bar chart of library category sizes"><ResponsiveContainer width="100%" height="100%"><BarChart data={categoryStats} layout="vertical" margin={{ top: 4, right: 20, left: 10, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8e2dc" /><XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#817671', fontSize: 11 }} /><YAxis type="category" dataKey="name" width={125} tickLine={false} axisLine={false} tick={{ fill: '#665a56', fontSize: 11 }} /><Tooltip /><Bar dataKey="copies" name="Copies" fill="#8b0000" radius={[0, 5, 5, 0]} /></BarChart></ResponsiveContainer></div> : <p className="rounded-xl bg-neutral-50 py-12 text-center text-sm text-neutral-500 dark:bg-neutral-900">No catalogue records to chart yet.</p>}
+          {categoryStats.length ? <div className="h-80" role="img" aria-label="Horizontal bar chart of library category sizes"><ResponsiveContainer width="100%" height="100%"><BarChart data={categoryStats} layout="vertical" margin={{ top: 4, right: 20, left: 10, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" /><XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} /><YAxis type="category" dataKey="name" width={125} tickLine={false} axisLine={false} tick={{ fill: '#475569', fontSize: 11 }} /><Tooltip /><Bar dataKey="copies" name="Copies" fill="#4f46e5" radius={[0, 5, 5, 0]} /></BarChart></ResponsiveContainer></div> : <p className="rounded-xl bg-neutral-50 py-12 text-center text-sm text-neutral-500 dark:bg-neutral-900">No catalogue records to chart yet.</p>}
         </article>
         <article className={panelClass}>
           <div className="mb-4"><h2 className="text-base font-bold text-neutral-950 dark:text-white">Most borrowed titles</h2><p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Based on saved lifetime checkout counts</p></div>
-          {popularBooks.length ? <div className="h-80" role="img" aria-label="Bar chart of most borrowed book titles"><ResponsiveContainer width="100%" height="100%"><BarChart data={popularBooks} margin={{ top: 4, right: 10, left: -12, bottom: 42 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8e2dc" /><XAxis dataKey="title" interval={0} angle={-24} textAnchor="end" height={70} tickLine={false} axisLine={false} tick={{ fill: '#665a56', fontSize: 10 }} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#817671', fontSize: 11 }} /><Tooltip /><Bar dataKey="checkouts" name="Checkouts" fill="#d4a13b" radius={[5, 5, 0, 0]} /></BarChart></ResponsiveContainer></div> : <div className="flex h-80 flex-col items-center justify-center text-center"><BookOpen className="h-9 w-9 text-neutral-300" /><p className="mt-3 text-sm font-semibold text-neutral-700 dark:text-neutral-200">Not enough checkout history yet</p><p className="mt-1 max-w-xs text-xs text-neutral-500">Once loans are completed, the most borrowed titles will be ranked here.</p></div>}
+          {popularBooks.length ? <div className="h-80" role="img" aria-label="Bar chart of most borrowed book titles"><ResponsiveContainer width="100%" height="100%"><BarChart data={popularBooks} margin={{ top: 4, right: 10, left: -12, bottom: 42 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" /><XAxis dataKey="title" interval={0} angle={-24} textAnchor="end" height={70} tickLine={false} axisLine={false} tick={{ fill: '#475569', fontSize: 10 }} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} /><Tooltip /><Bar dataKey="checkouts" name="Checkouts" fill="#06b6d4" radius={[5, 5, 0, 0]} /></BarChart></ResponsiveContainer></div> : <div className="flex h-80 flex-col items-center justify-center text-center"><BookOpen className="h-9 w-9 text-neutral-300" /><p className="mt-3 text-sm font-semibold text-neutral-700 dark:text-neutral-200">Not enough checkout history yet</p><p className="mt-1 max-w-xs text-xs text-neutral-500">Once loans are completed, the most borrowed titles will be ranked here.</p></div>}
         </article>
-        <div className="grid grid-cols-2 gap-3 xl:col-span-2"><article className={panelClass}><p className="text-xs font-semibold text-neutral-500">Active titles</p><p className="mt-2 text-3xl font-bold text-neutral-950 dark:text-white">{compactNumber.format(activeBooks.length)}</p><p className="mt-1 text-xs text-neutral-500">Archived titles excluded</p></article><article className={panelClass}><p className="text-xs font-semibold text-neutral-500">Physical copies</p><p className="mt-2 text-3xl font-bold text-neutral-950 dark:text-white">{compactNumber.format(totalVolume)}</p><p className="mt-1 text-xs text-neutral-500">Across all active titles</p></article></div>
+        <div className="grid gap-3 sm:grid-cols-3 xl:col-span-2"><article className={panelClass}><p className="text-xs font-semibold text-slate-500">Active titles</p><p className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">{compactNumber.format(catalogue.activeTitles)}</p><p className="mt-1 text-xs text-slate-500">{compactNumber.format(catalogue.archivedTitles)} archived titles excluded</p></article><article className={panelClass}><p className="text-xs font-semibold text-slate-500">Active copies</p><p className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">{compactNumber.format(totalVolume)}</p><p className="mt-1 text-xs text-slate-500">Assigned to active titles</p></article><article className={panelClass}><p className="text-xs font-semibold text-slate-500">All physical-copy records</p><p className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">{compactNumber.format(catalogue.totalPhysicalCopies)}</p><p className="mt-1 text-xs text-slate-500">{compactNumber.format(catalogue.archivedPhysicalCopies)} attached to archived titles</p></article></div>
       </section>}
 
       {reportType === 'fines' && <section className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
         <article className={panelClass}>
           <div><h2 className="text-base font-bold text-neutral-950 dark:text-white">Fine balance</h2><p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Collected versus outstanding amounts in LKR</p></div>
-          <div className="mt-3 h-80" role="img" aria-label="Bar chart of collected and outstanding fine amounts"><ResponsiveContainer width="100%" height="100%"><BarChart data={finesSplit.length ? finesSplit : [{ name: 'No fine records', value: 0 }]} margin={{ top: 12, right: 16, left: 4, bottom: 8 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8e2dc" /><XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: '#665a56', fontSize: 12 }} /><YAxis tickLine={false} axisLine={false} tick={{ fill: '#817671', fontSize: 11 }} /><Tooltip formatter={(value: number) => [`LKR ${Number(value).toFixed(2)}`, 'Balance']} /><Bar dataKey="value" name="LKR" radius={[7, 7, 0, 0]} maxBarSize={72}>{finesSplit.map((entry, index) => <Cell key={entry.name} fill={index === 0 ? '#527a69' : '#8b0000'} />)}</Bar></BarChart></ResponsiveContainer></div>
+          <div className="mt-3 h-80" role="img" aria-label="Bar chart of collected and outstanding fine amounts"><ResponsiveContainer width="100%" height="100%"><BarChart data={finesSplit.length ? finesSplit : [{ name: 'No fine records', value: 0 }]} margin={{ top: 12, right: 16, left: 4, bottom: 8 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" /><XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: '#475569', fontSize: 12 }} /><YAxis tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} /><Tooltip formatter={(value: number) => [`LKR ${Number(value).toFixed(2)}`, 'Balance']} /><Bar dataKey="value" name="LKR" radius={[7, 7, 0, 0]} maxBarSize={72}>{finesSplit.map((entry, index) => <Cell key={entry.name} fill={index === 0 ? '#10b981' : '#4f46e5'} />)}</Bar></BarChart></ResponsiveContainer></div>
         </article>
         <article className={panelClass}>
           <div><h2 className="text-base font-bold text-neutral-950 dark:text-white">Collection status</h2><p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Totals summarized from the fines ledger</p></div>
-          {finesSplit.length ? <div className="h-56 pt-2" role="img" aria-label="Pie chart of collected and outstanding fines"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={finesSplit} dataKey="value" nameKey="name" innerRadius={52} outerRadius={82} paddingAngle={4} stroke="none">{finesSplit.map((entry, index) => <Cell key={entry.name} fill={index === 0 ? '#527a69' : '#8b0000'} />)}</Pie><Tooltip formatter={(value: number) => `LKR ${Number(value).toFixed(2)}`} /><Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} /></PieChart></ResponsiveContainer></div> : <div className="flex h-56 flex-col items-center justify-center text-center"><CircleDollarSign className="h-8 w-8 text-neutral-300" /><p className="mt-2 text-sm font-semibold text-neutral-700 dark:text-neutral-200">No fines recorded yet</p></div>}
+          {finesSplit.length ? <div className="h-56 pt-2" role="img" aria-label="Pie chart of collected and outstanding fines"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={finesSplit} dataKey="value" nameKey="name" innerRadius={52} outerRadius={82} paddingAngle={4} stroke="none">{finesSplit.map((entry, index) => <Cell key={entry.name} fill={index === 0 ? '#10b981' : '#4f46e5'} />)}</Pie><Tooltip formatter={(value: number) => `LKR ${Number(value).toFixed(2)}`} /><Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} /></PieChart></ResponsiveContainer></div> : <div className="flex h-56 flex-col items-center justify-center text-center"><CircleDollarSign className="h-8 w-8 text-neutral-300" /><p className="mt-2 text-sm font-semibold text-neutral-700 dark:text-neutral-200">No fines recorded yet</p></div>}
           <div className="space-y-2"><div className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2.5 dark:bg-emerald-950/40"><span className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">Collected</span><span className="font-mono text-sm font-bold text-emerald-800 dark:text-emerald-200">LKR {totalPaidFines.toFixed(2)}</span></div><div className="flex items-center justify-between rounded-xl bg-rose-50 px-3 py-2.5 dark:bg-rose-950/40"><span className="text-xs font-semibold text-rose-800 dark:text-rose-200">Outstanding</span><span className="font-mono text-sm font-bold text-rose-800 dark:text-rose-200">LKR {totalUnpaidFines.toFixed(2)}</span></div></div>
         </article>
       </section>}

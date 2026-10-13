@@ -98,6 +98,7 @@ interface LibraryContextType {
   updateBook: (book: Book) => Promise<boolean>;
   deleteBook: (bookId: string) => void;
   restoreBook: (bookId: string) => Promise<void>;
+  permanentlyDeleteArchivedBook: (bookId: string) => Promise<boolean>;
   addBookCopy: (bookId: string, copyData?: { parigahanaAnkaya?: string; shelfLocation?: string; condition?: 'new' | 'good' | 'fair' | 'damaged' }) => void;
 
   // Actions - Members
@@ -1018,6 +1019,57 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
       setBooks((prev) => prev.map((item) => item.id === bookId ? { ...item, isArchived: false } : item));
     }
     addToast({ type: 'success', title: 'Book restored', message: `${book.title} is back in the active catalogue.` });
+  };
+
+  const permanentlyDeleteArchivedBook = async (bookId: string): Promise<boolean> => {
+    const book = books.find((item) => item.id === bookId);
+    if (!book) return false;
+    if (!currentUser.permissions.includes('delete_books')) {
+      addToast({ type: 'error', title: 'Permission denied', message: 'Only authorized library administrators can permanently delete catalogue records.' });
+      return false;
+    }
+    if (!book.isArchived) {
+      addToast({ type: 'error', title: 'Archive the record first', message: 'Permanent deletion is only available for records already in Archived records.' });
+      return false;
+    }
+
+    const circulationCount = circulation.filter((record) => record.bookId === bookId).length;
+    const reservationCount = reservations.filter((record) => record.bookId === bookId).length;
+    if (circulationCount || reservationCount) {
+      addToast({
+        type: 'error',
+        title: 'Record protected',
+        message: `Deletion is blocked to preserve linked history (${circulationCount} circulation record${circulationCount === 1 ? '' : 's'}, ${reservationCount} reservation${reservationCount === 1 ? '' : 's'}).`,
+      });
+      return false;
+    }
+
+    const supabase = getSupabase();
+    if (supabase && !bookId.startsWith('bk-')) {
+      const { data, error } = await supabase.from('books').delete().eq('id', bookId).eq('is_archived', true).select('id');
+      if (error) {
+        addToast({
+          type: 'error',
+          title: 'Record was not deleted',
+          message: error.code === '23503' ? 'A linked circulation or inventory record still protects this title.' : error.message,
+        });
+        return false;
+      }
+      if (!data?.length) {
+        addToast({ type: 'error', title: 'Record was not deleted', message: 'It may no longer be archived, or your access may have changed. Refresh the catalogue and try again.' });
+        return false;
+      }
+      await refreshAllData();
+    } else {
+      setBooks((previous) => previous.filter((item) => item.id !== bookId));
+    }
+
+    addToast({
+      type: 'success',
+      title: 'Archived record permanently deleted',
+      message: `${book.title} and ${book.totalCopies} linked physical-copy record${book.totalCopies === 1 ? '' : 's'} were removed.`,
+    });
+    return true;
   };
 
   const addBookCopy = async (bookId: string, copyData?: { parigahanaAnkaya?: string; shelfLocation?: string; condition?: 'new' | 'good' | 'fair' | 'damaged' }) => {
@@ -1954,6 +2006,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         updateBook,
         deleteBook,
         restoreBook,
+        permanentlyDeleteArchivedBook,
         addBookCopy,
         addMember,
         updateMember,

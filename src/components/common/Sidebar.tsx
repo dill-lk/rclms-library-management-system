@@ -149,7 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 lg:hidden"
+            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 lg:hidden"
           >
             <X className="w-4 h-4" />
           </button>
@@ -165,7 +165,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               <Command className="w-3.5 h-3.5 text-neutral-500 group-hover:text-amber-400 transition-colors" />
               <span>Quick Search...</span>
             </span>
-            <kbd className="px-1.5 py-0.5 text-[10px] bg-neutral-950 rounded border border-neutral-800 font-mono text-neutral-400">
+            <kbd className="px-1.5 py-0.5 text-[10px] bg-neutral-100 rounded border border-neutral-200 font-mono text-neutral-500">
               ⌘K
             </kbd>
           </button>
@@ -188,7 +188,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                       onClick={() => handleNavClick(item.id)}
                       className={`w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-all duration-150 ${
                         isActive
-                          ? 'bg-neutral-950 text-white font-semibold'
+                          ? 'bg-maroon-700 text-white font-semibold shadow-sm'
                           : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950'
                       }`}
                     >
@@ -222,7 +222,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               onClick={() => handleNavClick('profile')}
               className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 min-w-0"
             >
-              <div className="w-8 h-8 rounded-full bg-neutral-950 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-maroon-700 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
                 {currentUser.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
               </div>
               <div className="truncate text-left">
@@ -238,13 +238,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <button
               onClick={logout}
               title="Sign Out"
-              className="p-2 rounded-lg text-neutral-400 hover:text-rose-400 hover:bg-neutral-800 transition"
+              className="p-2 rounded-lg text-neutral-400 hover:text-rose-600 hover:bg-rose-50 transition"
             >
               <LogOut className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="text-[9px] text-neutral-500 text-center font-mono border-t border-neutral-800/80 pt-1.5 flex items-center justify-center gap-1">
+          <div className="text-[9px] text-neutral-500 text-center font-mono border-t border-neutral-200 pt-2 flex items-center justify-center gap-1">
             <span>Rahula College Library</span>
           </div>
         </div>

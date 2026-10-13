@@ -2,7 +2,7 @@
 **Rahula College, Matara, Sri Lanka**  
 *Systems by Ink.q*
 
-A modern, production-grade Library Management System built for Rahula College featuring authentic institutional branding, deep crimson maroon (`#8B0000`) and warm gold (`#D4AF37`) aesthetics, responsive high-tech workflows, and a specialized **Zebra ZD230 thermal printer 3-across (30mm × 15mm) continuous barcode label studio**.
+A modern, responsive Library Management System built for Rahula College with a calm indigo/cyan visual system, clear catalogue and circulation analytics, and a specialized **Zebra ZD230 thermal printer 3-across (30mm × 15mm) continuous barcode label studio**.
 
 ---
 
@@ -56,6 +56,7 @@ A modern, production-grade Library Management System built for Rahula College fe
 - For an existing project, apply the migration after reviewing its read-only duplicate-accession report. It does not delete or merge existing records.
 - The migration adds `books.is_archived`; catalogue removal and duplicate cleanup archive records instead of deleting them. Authorized administrators can restore archived titles from the catalogue.
 - Duplicate review groups only exact normalized accession-number matches. It requires an explicit keeper choice, preserves history/copies, and blocks archiving a candidate while it has open loans or active reservations.
+- Permanent deletion is a separate administrator-only action available only for already-archived titles. The confirmation names the linked physical-copy count, requires typing the exact title, and blocks deletion when circulation or reservation history is linked; the database delete also filters on `is_archived = true`.
 - The migration adds atomic, retry-safe catalogue saving and restricts database writes to authorized library staff. Public signup remains limited to student and teacher profiles.
 - Do not use or publish default passwords. Create accounts through Supabase Auth and rotate any temporary credentials previously shared in documentation.
 

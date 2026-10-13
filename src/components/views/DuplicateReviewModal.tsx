@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Archive, AlertTriangle, Check, Copy, RotateCcw, X } from 'lucide-react';
+import { Archive, AlertTriangle, Check, Copy, RotateCcw, Trash2, X } from 'lucide-react';
 import { useLibrary } from '../../context/LibraryContext';
 import type { Book } from '../../types';
+import { PermanentlyDeleteArchivedBookModal } from './PermanentlyDeleteArchivedBookModal';
 
 interface DuplicateReviewModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export const DuplicateReviewModal: React.FC<DuplicateReviewModalProps> = ({ isOp
   const { books, circulation, reservations, deleteBook, restoreBook, currentUser } = useLibrary();
   const [showArchived, setShowArchived] = useState(false);
   const [keeperByKey, setKeeperByKey] = useState<Record<string, string>>({});
+  const [bookToPermanentlyDelete, setBookToPermanentlyDelete] = useState<Book | null>(null);
   const canArchive = currentUser.permissions.includes('delete_books');
 
   const duplicateGroups = useMemo<DuplicateGroup[]>(() => {
@@ -95,7 +97,10 @@ export const DuplicateReviewModal: React.FC<DuplicateReviewModalProps> = ({ isOp
                 {archivedBooks.map((book) => (
                   <article key={book.id} className="flex flex-col gap-3 rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800 sm:flex-row sm:items-center sm:justify-between">
                     <div><p className="font-semibold text-neutral-900 dark:text-white">{book.title}</p><p className="mt-1 text-xs text-neutral-500">{book.author} · Accession {book.isbn || '—'} · {book.totalCopies} physical copies preserved</p></div>
-                    <button type="button" disabled={!canArchive} onClick={() => restoreArchived(book)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-emerald-300 px-3 text-xs font-bold text-emerald-800 hover:bg-emerald-50 disabled:opacity-50 dark:border-emerald-800 dark:text-emerald-200 dark:hover:bg-emerald-950/40"><RotateCcw className="h-4 w-4" />Restore to catalogue</button>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" disabled={!canArchive} onClick={() => restoreArchived(book)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-emerald-300 px-3 text-xs font-bold text-emerald-800 hover:bg-emerald-50 disabled:opacity-50 dark:border-emerald-800 dark:text-emerald-200 dark:hover:bg-emerald-950/40"><RotateCcw className="h-4 w-4" />Restore</button>
+                      <button type="button" disabled={!canArchive} onClick={() => setBookToPermanentlyDelete(book)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-rose-200 px-3 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900 dark:text-rose-200 dark:hover:bg-rose-950/40"><Trash2 className="h-4 w-4" />Delete permanently</button>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -135,8 +140,9 @@ export const DuplicateReviewModal: React.FC<DuplicateReviewModalProps> = ({ isOp
           )}
         </div>
 
-        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 bg-neutral-50 px-5 py-4 dark:border-neutral-800 dark:bg-neutral-900/60 sm:px-7"><p className="flex items-center gap-2 text-[11px] text-neutral-500"><AlertTriangle className="h-4 w-4 text-amber-600" />Archiving hides a title from circulation but preserves its history; restoration is available here.</p><button type="button" onClick={onClose} className="min-h-10 rounded-xl bg-maroon-800 px-5 text-sm font-bold text-white hover:bg-maroon-900">Close review</button></footer>
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 bg-neutral-50 px-5 py-4 dark:border-neutral-800 dark:bg-neutral-900/60 sm:px-7"><p className="flex items-center gap-2 text-[11px] text-neutral-500"><AlertTriangle className="h-4 w-4 text-amber-600" />Archived rows can be restored or permanently deleted here. Permanent delete is blocked when history is linked.</p><button type="button" onClick={onClose} className="min-h-10 rounded-xl bg-maroon-800 px-5 text-sm font-bold text-white hover:bg-maroon-900">Close review</button></footer>
       </section>
+      <PermanentlyDeleteArchivedBookModal book={bookToPermanentlyDelete} onClose={() => setBookToPermanentlyDelete(null)} />
     </div>
   );
 };

@@ -115,7 +115,7 @@ export const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#0B0D10] text-neutral-900 dark:text-neutral-100 flex flex-col selection:bg-neutral-900 selection:text-white">
+    <div className="min-h-screen bg-[#f3f6fb] dark:bg-[#0d1522] text-neutral-900 dark:text-neutral-100 flex flex-col selection:bg-indigo-600 selection:text-white">
       {/* Sidebar Navigation */}
       <Sidebar
         isOpen={isSidebarOpen}
@@ -135,7 +135,7 @@ export const AppContent: React.FC = () => {
         </main>
 
         {/* Application footer */}
-        <footer className="px-6 py-4 border-t border-neutral-200 dark:border-neutral-800 text-center text-xs text-neutral-500 bg-white dark:bg-[#111317]">
+        <footer className="px-6 py-4 border-t border-neutral-200 dark:border-neutral-800 text-center text-xs text-neutral-500 bg-white dark:bg-[#141f2e]">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl mx-auto">
             <span className="font-heading font-semibold text-neutral-800 dark:text-neutral-200 flex items-center gap-2">
               <img src="/logo.png" alt="Emblem" className="w-4 h-5 object-contain inline-block" />
