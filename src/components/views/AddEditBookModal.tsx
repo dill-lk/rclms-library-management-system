@@ -18,7 +18,6 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
   const { addBook, updateBook, categories, authors, publishers, setActiveTab } = useLibrary();
 
   const [title, setTitle] = useState('');
-  const [subtitle, setSubtitle] = useState('');
   const [author, setAuthor] = useState('');
   const [accessionNumber, setAccessionNumber] = useState('');
   const [category, setCategory] = useState('');
@@ -29,8 +28,6 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
   const [language, setLanguage] = useState<'Sinhala' | 'English' | 'Tamil' | 'Pali'>('Sinhala');
   const [totalCopies, setTotalCopies] = useState<number>(1);
   const [shelfIdentifier, setShelfIdentifier] = useState('Shelf A-01');
-  const [synopsis, setSynopsis] = useState('');
-  const [keywords, setKeywords] = useState('Sri Lanka, Education');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -39,7 +36,6 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
   useEffect(() => {
     if (editBookData) {
       setTitle(editBookData.title);
-      setSubtitle(editBookData.subtitle || '');
       setAuthor(editBookData.author);
       setAccessionNumber(editBookData.isbn);
       setCategory(editBookData.category);
@@ -50,11 +46,8 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       setLanguage(editBookData.language);
       setTotalCopies(editBookData.totalCopies);
       setShelfIdentifier(editBookData.shelfLocation);
-      setSynopsis(editBookData.description);
-      setKeywords(editBookData.tags ? editBookData.tags.join(', ') : '');
     } else {
       setTitle('');
-      setSubtitle('');
       setAuthor('');
       setAccessionNumber('');
       setCategory(categories[0]?.name || '');
@@ -65,8 +58,6 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       setLanguage('Sinhala');
       setTotalCopies(1);
       setShelfIdentifier('');
-      setSynopsis('');
-      setKeywords('');
     }
     setErrors({});
   }, [editBookData, isOpen, categories, authors, publishers]);
@@ -99,16 +90,10 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
     saveLockRef.current = true;
     setIsSaving(true);
     try {
-      const parsedTags = keywords
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean);
-
       if (editBookData) {
         const updated: Book = {
           ...editBookData,
           title: title.trim(),
-          subtitle: subtitle.trim(),
           author: author.trim(),
           isbn: accessionNumber.trim(),
           category,
@@ -118,15 +103,12 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
           language,
           shelfLocation: shelfIdentifier.trim(),
           section: '',
-          description: synopsis || `Collection text cataloged at Rahula College Library.`,
-          tags: parsedTags,
         };
         const saved = await updateBook(updated);
         if (saved !== false) onClose();
       } else {
         const saved = await addBook({
           title: title.trim(),
-          subtitle: subtitle.trim(),
           author: author.trim(),
           isbn: accessionNumber.trim(),
           category,
@@ -137,18 +119,16 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
           totalCopies: Number(totalCopies),
           shelfLocation: shelfIdentifier.trim(),
           section: '',
-          description: synopsis || `Collection text cataloged at Rahula College Library.`,
+          description: '',
           rating: 4.8,
-          tags: parsedTags,
+          tags: [],
           copies: [],
         });
 
         if (saved === false) return;
         if (addAnother) {
           setTitle('');
-          setSubtitle('');
           setAccessionNumber('');
-          setSynopsis('');
         } else {
           onClose();
         }
@@ -194,7 +174,7 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
 
         {/* Section 1: Title Metadata */}
         <div className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <div>
               <label className="block font-bold text-neutral-900 mb-1">
                 Book Title *
@@ -208,19 +188,6 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                 className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-lg text-neutral-900 focus:outline-hidden focus:ring-2 focus:ring-neutral-900"
               />
               {errors.title && <p className="text-neutral-900 font-bold text-[11px] mt-1">⚠️ {errors.title}</p>}
-            </div>
-
-            <div>
-              <label className="block font-bold text-neutral-700 mb-1">
-                Subtitle (Optional)
-              </label>
-              <input
-                type="text"
-                value={subtitle}
-                onChange={(e) => setSubtitle(e.target.value)}
-                placeholder="e.g. The Classic Tale of Upali and Jinna"
-                className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-lg text-neutral-900"
-              />
             </div>
           </div>
 
@@ -384,31 +351,6 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
             </div>
           </div>
 
-          <div>
-            <label className="block font-bold text-neutral-700 mb-1">
-              Synopsis / Academic Notes
-            </label>
-            <textarea
-              rows={2}
-              value={synopsis}
-              onChange={(e) => setSynopsis(e.target.value)}
-              placeholder="Brief overview of the book topics or syllabus relevance..."
-              className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-lg text-neutral-900"
-            />
-          </div>
-
-          <div>
-            <label className="block font-bold text-neutral-700 mb-1">
-              Keywords / Search Tags
-            </label>
-            <input
-              type="text"
-              value={keywords}
-              onChange={(e) => setKeywords(e.target.value)}
-              placeholder="e.g. Sinhala literature, Sri Lankan fiction, school reading"
-              className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-lg text-neutral-900"
-            />
-          </div>
         </div>
 
         {/* Section 3: Review Before Saving Box */}

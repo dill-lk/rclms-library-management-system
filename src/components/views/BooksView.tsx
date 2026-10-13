@@ -151,6 +151,17 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
     setActiveTab('book_details');
   };
 
+  const handleRefreshCatalogue = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await refreshAllData();
+      addToast({ type: 'info', title: 'Catalog Refreshed', message: 'Loaded the latest collection records.' });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const handleResetFilters = () => {
     setSelectedCategory('all');
     setSelectedLanguage('all');
@@ -174,6 +185,17 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
 
         {/* Keep the everyday action visible; group less-used tools together. */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => void handleRefreshCatalogue()}
+            disabled={isRefreshing}
+            aria-label="Refresh book catalogue"
+            title="Refresh catalogue"
+            className="inline-flex min-h-10 items-center gap-2 border border-library-border bg-library-surface px-3 text-sm font-semibold text-library-main transition hover:bg-library-bg disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Refreshing…' : 'Refresh'}</span>
+          </button>
           {isStaff && (
             <button
               onClick={onAddBook}
@@ -190,19 +212,6 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
               <span>More</span>
             </summary>
             <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-52 overflow-hidden rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl">
-              <button type="button" role="menuitem" disabled={isRefreshing} onClick={async (event) => {
-                event.currentTarget.closest('details')?.removeAttribute('open');
-                setIsRefreshing(true);
-                try {
-                  await refreshAllData();
-                  addToast({ type: 'info', title: 'Catalog Refreshed', message: 'Loaded the latest collection records.' });
-                } finally {
-                  setIsRefreshing(false);
-                }
-              }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-700 transition hover:bg-neutral-100 disabled:opacity-50">
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                <span>{isRefreshing ? 'Refreshing…' : 'Refresh catalogue'}</span>
-              </button>
               <button type="button" role="menuitem" onClick={(event) => { event.currentTarget.closest('details')?.removeAttribute('open'); setActiveTab('zebra_printer'); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-700 transition hover:bg-neutral-100">
                 <Printer className="h-4 w-4" />
                 <span>Print labels</span>
@@ -406,9 +415,9 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
         </div>
       ) : viewMode === 'table' ? (
         /* TABLE VIEW */
-        <div className="bg-white rounded-2xl border border-neutral-200 shadow-xs overflow-hidden">
+        <div className="catalogue-table-card bg-white rounded-2xl border border-neutral-200 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="catalogue-table w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-neutral-50/75 border-b border-neutral-200 text-neutral-600 font-bold uppercase tracking-wider text-[11px]">
                   <th className="py-3 px-4">Book Title & Author</th>
@@ -650,7 +659,7 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-neutral-200 text-xs">
+        <div className="catalogue-pagination flex items-center justify-between bg-white p-4 rounded-2xl border border-neutral-200 text-xs">
           <span className="text-neutral-500">
             Showing Page <span className="font-bold text-neutral-900">{currentPage}</span> of{' '}
             <span className="font-bold text-neutral-900">{totalPages}</span> ({filteredBooks.length} titles)

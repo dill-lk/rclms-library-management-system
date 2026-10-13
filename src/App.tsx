@@ -1,5 +1,6 @@
-import React, { lazy, Suspense, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { useLibrary } from './context/LibraryContext';
+import { heartbeatCurrentDeviceSession } from './utils/deviceSessions';
 import { Header } from './components/common/Header';
 import { Sidebar } from './components/common/Sidebar';
 import { ToastContainer } from './components/common/ToastContainer';
@@ -32,8 +33,41 @@ const ProfileView = lazy(() => import('./components/views/ProfileView').then(({ 
 const RecommendationsView = lazy(() => import('./components/views/RecommendationsView').then(({ RecommendationsView }) => ({ default: RecommendationsView })));
 
 export const AppContent: React.FC = () => {
-  const { isLoggedIn, activeTab, setActiveTab, printData, isCommandPaletteOpen } = useLibrary();
+  const { isLoggedIn, activeTab, setActiveTab, printData, isCommandPaletteOpen, logout, addToast } = useLibrary();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    let mounted = true;
+    let checking = false;
+    const checkSession = async () => {
+      if (checking) return;
+      checking = true;
+      try {
+        const { status } = await heartbeatCurrentDeviceSession();
+        if (!mounted || !status || status === 'active' || status === 'untracked' || status === 'unavailable') return;
+        const reason = status === 'paused'
+          ? 'This device session was paused by an administrator.'
+          : status === 'blocked'
+            ? 'This device session was blocked by an administrator.'
+            : status === 'account_inactive'
+              ? 'This library account is inactive.'
+              : 'This sign-in session has ended.';
+        addToast({ type: 'warning', title: 'Library access ended', message: reason });
+        logout();
+      } catch {
+        // A transient heartbeat failure is not evidence that access was revoked.
+      } finally {
+        checking = false;
+      }
+    };
+    void checkSession();
+    const interval = window.setInterval(() => void checkSession(), 30_000);
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, [isLoggedIn, logout, addToast]);
 
   // Book Modal State
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);

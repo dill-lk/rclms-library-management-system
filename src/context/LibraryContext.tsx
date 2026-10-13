@@ -35,6 +35,7 @@ import {
   getSupabase,
   getStoredSupabaseConfig,
 } from '../utils/supabaseClient';
+import { registerCurrentDeviceSession } from '../utils/deviceSessions';
 import { defaultDesignations, permissionsForRole } from '../utils/roles';
 
 export interface ToastMessage {
@@ -660,6 +661,15 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
             }
           }
 
+          const deviceSession = await registerCurrentDeviceSession();
+          if (deviceSession.error || deviceSession.status !== 'active') {
+            await supabase.auth.signOut({ scope: 'local' });
+            return {
+              success: false,
+              message: deviceSession.error || `This sign-in session is ${deviceSession.status}. Contact an administrator if access should be restored.`,
+            };
+          }
+
           setCurrentUser(authedUser);
           setIsLoggedIn(true);
           await refreshAllData();
@@ -749,6 +759,15 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
             }
           }
 
+          const deviceSession = await registerCurrentDeviceSession();
+          if (deviceSession.error || deviceSession.status !== 'active') {
+            await supabase.auth.signOut({ scope: 'local' });
+            return {
+              success: false,
+              message: deviceSession.error || `This sign-in session is ${deviceSession.status}. Contact an administrator if access should be restored.`,
+            };
+          }
+
           const newUser: UserAccount = {
             id: authData.user.id,
             name: userData.name,
@@ -817,10 +836,17 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     });
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     const supabase = getSupabase();
     if (supabase) {
-      supabase.auth.signOut().catch(() => {});
+      void (async () => {
+        try {
+          await supabase.rpc('end_library_device_session');
+        } catch {
+          // Local Auth sign-out must still complete when the session RPC is offline.
+        }
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+      })();
     }
     setIsLoggedIn(false);
     localStorage.removeItem('rahula_lms_logged_in');
@@ -829,7 +855,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
       title: 'Signed Out',
       message: 'You have been safely signed out.',
     });
-  };
+  }, [addToast]);
 
   const addUser = (newUser: Omit<UserAccount, 'id'>) => {
     const user: UserAccount = {

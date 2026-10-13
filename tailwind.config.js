@@ -33,12 +33,12 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['DM Sans', 'Calibri', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        body: ['DM Sans', 'Calibri', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        heading: ['Lora', 'Georgia', 'serif'],
+        sans: ['DM Sans', 'Noto Sans Sinhala', 'Calibri', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        body: ['DM Sans', 'Noto Sans Sinhala', 'Calibri', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        heading: ['DM Sans', 'Noto Sans Sinhala', 'Calibri', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         sinhala: ['"Noto Sans Sinhala"', 'system-ui', 'sans-serif'],
-        mono: ['"JetBrains Mono"', '"Fira Code"', 'ui-monospace', 'monospace'],
-        codes: ['"JetBrains Mono"', '"Fira Code"', 'ui-monospace', 'monospace'],
+        mono: ['DM Sans', 'Noto Sans Sinhala', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        codes: ['DM Sans', 'Noto Sans Sinhala', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         subtle: '0 1px 3px rgba(0,0,0,.36), 0 8px 20px rgba(0,0,0,.24)',

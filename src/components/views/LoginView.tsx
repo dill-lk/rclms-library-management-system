@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
-import { CollegeCrest } from '../common/CollegeCrest';
 import { UserRole } from '../../types';
 import {
   Eye,
@@ -11,9 +10,7 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
-  ShieldCheck,
   HelpCircle,
-  KeyRound,
 } from 'lucide-react';
 
 export const LoginView: React.FC = () => {
@@ -154,22 +151,19 @@ export const LoginView: React.FC = () => {
   return (
     <div className="login-page min-h-screen overflow-x-hidden bg-library-bg text-library-main flex flex-col p-4 sm:p-6 font-body">
       <div className="login-topbar w-full max-w-5xl mx-auto py-2 flex items-center justify-between">
-        <CollegeCrest size="sm" lightMode />
+        <span className="text-xs font-semibold tracking-wide text-library-main">Rahula College</span>
         <span className="text-xs font-semibold tracking-wide text-neutral-500 hidden sm:block">Matara · Sri Lanka</span>
       </div>
 
       {/* Main sign-in workspace */}
       <div className="login-layout w-full max-w-5xl mx-auto flex-1 py-8 lg:py-12 grid min-w-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] gap-8 items-start">
         <div className="login-hero relative isolate hidden min-h-[29rem] h-full flex-col justify-between overflow-hidden rounded-3xl border border-library-border bg-library-surface p-9 text-library-main shadow-card lg:flex xl:p-10">
-          <div aria-hidden="true" className="absolute -right-24 -top-24 h-80 w-80 rounded-full border-[34px] border-indigo-300/30" />
-          <div aria-hidden="true" className="absolute -bottom-28 -left-20 h-72 w-72 rounded-full border-[28px] border-cyan-300/25" />
           <div aria-hidden="true" className="absolute inset-0 opacity-[0.45] [background-image:radial-gradient(#E7E5E4_0.7px,transparent_0.7px)] [background-size:20px_20px]" />
           <div className="relative">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-indigo-200 bg-white text-indigo-700 shadow-sm"><span className="font-heading text-lg font-bold">R</span></div>
-              <div><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-indigo-700">Rahula College</p><p className="mt-0.5 text-xs text-slate-500">Matara · Library & resource centre</p></div>
+              <div><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-indigo-700">Library Management System</p><p className="mt-1 text-xs text-slate-500">Rahula College · Matara</p></div>
             </div>
-            <p className="mt-10 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-700"><span className="h-1.5 w-1.5 rounded-full bg-library-action" />Your library, in one place</p>
+            <p className="mt-10 text-xs font-semibold uppercase tracking-[0.14em] text-library-muted">Your library, in one place</p>
             <h2 className="mt-4 max-w-lg text-4xl font-bold leading-tight tracking-tight xl:text-[2.7rem]">More time for readers. Less time searching.</h2>
             <p className="mt-4 max-w-md text-sm leading-6 text-slate-600">Keep the collection close at hand, follow loans, and make everyday library work feel easier.</p>
             <div className="relative mt-9 max-w-sm border-l border-library-border pl-4" aria-hidden="true">
@@ -181,9 +175,6 @@ export const LoginView: React.FC = () => {
       <div className="login-card w-full min-w-0 max-w-md lg:max-w-none mx-auto bg-library-surface border border-library-border rounded-3xl shadow-card p-6 sm:p-8 space-y-6 self-start">
         {/* Header Branding */}
         <div className="login-card-header text-center space-y-3">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-neutral-50 border border-neutral-200 flex items-center justify-center p-1.5">
-            <CollegeCrest size="sm" showText={false} />
-          </div>
           <div className="space-y-1">
             <h1 className="text-xl font-bold tracking-tight text-neutral-950">
               {authMode === 'login' ? 'Welcome back' : authMode === 'signup' ? 'Join the library' : authMode === 'forgot_password' ? 'Reset your password' : 'Welcome'}
@@ -420,9 +411,6 @@ export const LoginView: React.FC = () => {
         {authMode === 'forgot_password' && (
           <div className="space-y-4">
             <div className="space-y-1 text-center">
-              <div className="w-10 h-10 rounded-2xl bg-neutral-50 border border-neutral-200 flex items-center justify-center mx-auto text-neutral-300">
-                <KeyRound className="w-5 h-5" />
-              </div>
               <h2 className="text-sm font-bold text-white">Reset Password</h2>
               <p className="text-xs text-neutral-500">
                 Enter your registered email address to receive password recovery instructions.
@@ -494,9 +482,6 @@ export const LoginView: React.FC = () => {
         {authMode === 'setup_wizard' && (
           <div className="space-y-4">
             <div className="space-y-1 text-center">
-              <div className="w-10 h-10 rounded-2xl bg-neutral-50 border border-neutral-200 flex items-center justify-center mx-auto text-amber-400">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
               <h2 className="text-sm font-bold text-white">Initial System Setup</h2>
               <p className="text-xs text-neutral-500">
                 For authorized Chief Librarian / Administrator bootstrap only.

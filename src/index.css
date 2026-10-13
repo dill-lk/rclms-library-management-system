@@ -13,9 +13,9 @@
   --border-color: #2B2922;
   --alert-text: #A8A29E;
   --pure-white: #FFFFFF;
-  --font-headings: 'Lora', 'Georgia', serif;
-  --font-body: 'DM Sans', 'Calibri', sans-serif;
-  --font-codes: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-headings: 'DM Sans', 'Noto Sans Sinhala', sans-serif;
+  --font-body: 'DM Sans', 'Noto Sans Sinhala', sans-serif;
+  --font-codes: 'DM Sans', 'Noto Sans Sinhala', sans-serif;
 }
 
 .dark {
@@ -464,4 +464,117 @@ svg { flex-shrink: 0; }
   .login-card > * + * { margin-top: .75rem !important; }
   .login-card-header > div:first-child { width: 3rem !important; height: 3rem !important; }
   .login-card form > * + * { margin-top: .6rem !important; }
+}
+
+
+/* Final contrast and typography safety net for every page and shared component. */
+:root {
+  --font-headings: 'DM Sans', 'Noto Sans Sinhala', sans-serif;
+  --font-body: 'DM Sans', 'Noto Sans Sinhala', sans-serif;
+  --font-codes: 'DM Sans', 'Noto Sans Sinhala', sans-serif;
+}
+*, *::before, *::after { font-family: 'DM Sans', 'Noto Sans Sinhala', sans-serif !important; }
+
+/* Dark surfaces must never inherit near-black legacy text utilities. */
+.app-shell .text-black { color: var(--text-main) !important; }
+.app-shell .bg-white.text-black { background-color: var(--action-light) !important; color: var(--action-ink) !important; }
+.app-shell input:focus,
+.app-shell select:focus,
+.app-shell textarea:focus {
+  border-color: var(--text-muted) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(168,162,158,.18) !important;
+}
+.login-page input:focus,
+.login-page select:focus,
+.login-page textarea:focus {
+  border-color: var(--text-muted) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(168,162,158,.18) !important;
+}
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
+  outline-color: var(--text-muted) !important;
+}
+
+/* Common table heads and catalogue pagination remain readable in dark mode. */
+.app-shell table th,
+.app-shell table thead tr {
+  background-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+.app-shell table th { border-color: var(--border-color) !important; }
+.app-shell .catalogue-table-card,
+.app-shell .catalogue-pagination {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-main) !important;
+  border-color: var(--border-color) !important;
+}
+.app-shell .catalogue-table tbody tr:hover { background-color: var(--border-color) !important; }
+
+/* Balanced desktop sign-in; compact mobile sign-in, with square controls and no badge art. */
+.login-topbar { max-width: 58rem !important; padding-top: .75rem !important; padding-bottom: .75rem !important; }
+.login-layout {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 1rem !important;
+  width: 100% !important;
+  max-width: 26rem !important;
+  padding-top: clamp(.5rem, 3vh, 1.5rem) !important;
+  padding-bottom: clamp(.5rem, 3vh, 1.5rem) !important;
+}
+.login-hero { display: none !important; border-radius: 2px !important; }
+.login-hero > div[aria-hidden="true"] { display: none !important; }
+.login-card {
+  width: 100% !important;
+  max-width: 26rem !important;
+  align-self: center !important;
+  border-radius: 2px !important;
+  padding: clamp(1.1rem, 3vw, 1.6rem) !important;
+  box-shadow: 0 18px 44px rgba(0,0,0,.28) !important;
+}
+.login-card-header h1 { font-size: 1.35rem !important; }
+.login-card::before { height: 1px !important; background: var(--border-color) !important; }
+.login-card-header > div:first-child {
+  width: auto !important;
+  height: auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+.login-page [class*="rounded"] { border-radius: 2px !important; }
+.login-page [class*="ring-"] { --tw-ring-color: rgba(168,162,158,.22) !important; }
+.login-card input, .login-card select, .login-card textarea { border-radius: 2px !important; }
+.login-card > * + * { margin-top: .9rem !important; }
+@media (min-width: 1024px) {
+  .login-layout {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(22rem, 26rem) !important;
+    align-items: center !important;
+    gap: clamp(2rem, 5vw, 4rem) !important;
+    max-width: 58rem !important;
+    padding-top: clamp(1rem, 5vh, 3rem) !important;
+    padding-bottom: clamp(1rem, 5vh, 3rem) !important;
+  }
+  .login-hero {
+    display: flex !important;
+    min-height: 24rem !important;
+    justify-content: center !important;
+    padding: clamp(1.5rem, 3vw, 2.5rem) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 2px !important;
+    background: linear-gradient(145deg, #141311 0%, #0B0A08 72%, #141311 150%) !important;
+    box-shadow: none !important;
+  }
+  .login-hero h2 { max-width: 15ch !important; font-size: clamp(2rem, 3.3vw, 2.6rem) !important; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .login-layout { max-width: 28rem !important; }
+}
+@media (max-width: 767px) {
+  .login-page { min-height: 100svh !important; padding: .75rem !important; }
+  .login-layout { gap: .75rem !important; padding-top: .5rem !important; padding-bottom: .5rem !important; }
+  .login-card { padding: 1rem !important; }
+  .login-card > * + * { margin-top: .75rem !important; }
 }

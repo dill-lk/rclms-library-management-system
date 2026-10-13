@@ -4,19 +4,14 @@ import { StatusBadge } from '../common/StatusBadge';
 import {
   User,
   Key,
-  ShieldCheck,
-  Clock,
   Laptop,
-  CheckCircle2,
   Lock,
-  Mail,
-  Building,
   LogOut,
   Save
 } from 'lucide-react';
 
 export const ProfileView: React.FC = () => {
-  const { currentUser, addToast, logout } = useLibrary();
+  const { currentUser, addToast, logout, setActiveTab } = useLibrary();
 
   const [currentPass, setCurrentPass] = useState('');
   const [newPass, setNewPass] = useState('');
@@ -216,34 +211,17 @@ export const ProfileView: React.FC = () => {
         </div>
       </div>
 
-      {/* Audit Log / Session Trail */}
-      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-3">
-        <h3 className="text-sm font-bold font-heading text-gray-900 dark:text-white flex items-center gap-2">
-          <Clock className="w-4 h-4 text-gold-500" />
-          <span>Recent Activity & Security Audit Trail</span>
-        </h3>
-
-        <div className="space-y-2 text-xs divide-y divide-gray-100 dark:divide-slate-800">
-          <div className="pt-2 flex items-center justify-between">
-            <span className="text-gray-800 dark:text-gray-200 font-medium">
-              Signed in via Chief Librarian Desktop Terminal (Chrome / Windows 11)
-            </span>
-            <span className="text-gray-400 font-mono text-[11px]">Today at 07:45 AM</span>
-          </div>
-          <div className="pt-2 flex items-center justify-between">
-            <span className="text-gray-800 dark:text-gray-200 font-medium">
-              Issued copy #3 of "Madol Doova" to Kavindu Perera
-            </span>
-            <span className="text-gray-400 font-mono text-[11px]">Oct 04 at 02:15 PM</span>
-          </div>
-          <div className="pt-2 flex items-center justify-between">
-            <span className="text-gray-800 dark:text-gray-200 font-medium">
-              Stock reconciliation completed for Sri Lankan Heritage Archive Stack A
-            </span>
-            <span className="text-gray-400 font-mono text-[11px]">Sep 30 at 04:10 PM</span>
-          </div>
+      <section className="flex flex-col gap-3 border border-library-border bg-library-surface p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="flex items-center gap-2 text-sm font-bold text-library-main">
+            <Laptop className="h-4 w-4" /> Devices & session access
+          </h3>
+          <p className="mt-1 text-xs text-library-muted">Review signed-in devices and manage this account’s sessions in Settings.</p>
         </div>
-      </div>
+        <button type="button" onClick={() => setActiveTab('settings')} className="min-h-9 border border-library-border px-3 text-xs font-semibold text-library-main hover:bg-library-bg">
+          Manage devices
+        </button>
+      </section>
     </div>
   );
 };

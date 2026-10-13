@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
+import { DeviceSessionsPanel } from './DeviceSessionsPanel';
 import {
   Settings as SettingsIcon,
   Save,
@@ -268,6 +269,7 @@ export const SettingsView: React.FC = () => {
         </div>
       </form>
 
+      <DeviceSessionsPanel />
     </div>
   );
 };
