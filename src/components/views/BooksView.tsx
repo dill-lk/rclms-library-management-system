@@ -44,7 +44,8 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
     setSelectedBookId,
     setActiveTab,
     addToast,
-    addToLabelQueue,
+    labelQueue,
+    addManyToLabelQueue,
     catalogFilter,
     setCatalogFilter,
     currentUser,
@@ -149,6 +150,52 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
   const handleSelectBook = (bookId: string) => {
     setSelectedBookId(bookId);
     setActiveTab('book_details');
+  };
+
+  const handlePrintBookLabels = (book: Book) => {
+    const copies = book.copies.length > 0
+      ? book.copies
+      : Array.from({ length: book.totalCopies }, (_, index) => ({
+          barcode: index === 0 ? book.isbn : `${book.isbn}-${index + 1}`,
+          copyNumber: index + 1,
+          shelfLocation: book.shelfLocation,
+        }));
+
+    if (copies.length === 0) {
+      addToast({ type: 'warning', title: 'No copies to print', message: `“${book.title}” has no physical copies registered.` });
+      return;
+    }
+
+    const queuedBarcodes = new Set(labelQueue.map((item) => item.barcode.trim().toUpperCase()));
+    const labels = copies.reduce<Array<{
+      bookId: string;
+      title: string;
+      barcode: string;
+      shelfLocation: string;
+      category: string;
+      copyNumber: number;
+    }>>((result, copy, index) => {
+      const barcode = copy.barcode.trim();
+      const normalizedBarcode = barcode.toUpperCase();
+      if (!barcode || queuedBarcodes.has(normalizedBarcode)) return result;
+      queuedBarcodes.add(normalizedBarcode);
+      result.push({
+        bookId: book.id,
+        title: book.title,
+        barcode,
+        shelfLocation: copy.shelfLocation || book.shelfLocation,
+        category: book.category,
+        copyNumber: copy.copyNumber || index + 1,
+      });
+      return result;
+    }, []);
+
+    if (labels.length === 0) {
+      addToast({ type: 'info', title: 'Already in print queue', message: `All copy labels for “${book.title}” are already queued.` });
+    } else {
+      addManyToLabelQueue(labels);
+    }
+    setActiveTab('zebra_printer');
   };
 
   const handleRefreshCatalogue = async () => {
@@ -482,18 +529,10 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
                             </button>
                           )}
                           <button
-                            onClick={() => {
-                              addToLabelQueue({
-                                bookId: book.id,
-                                title: book.title,
-                                barcode: firstCopyBarcode,
-                                shelfLocation: book.shelfLocation,
-                                category: book.category,
-                                copyNumber: 1,
-                              });
-                            }}
+                            onClick={() => handlePrintBookLabels(book)}
                             className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition"
-                            title="Add to print-label queue"
+                            aria-label={`Print barcode labels for all ${book.totalCopies} copies of ${book.title}`}
+                            title={`Queue all ${book.totalCopies} copy labels and open Print labels`}
                           >
                             <Printer className="w-4 h-4" />
                           </button>
@@ -616,18 +655,10 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
                     </button>
                   )}
                   {!book.isArchived && <button
-                    onClick={() => {
-                      addToLabelQueue({
-                        bookId: book.id,
-                        title: book.title,
-                        barcode: firstCopyBarcode,
-                        shelfLocation: book.shelfLocation,
-                        category: book.category,
-                        copyNumber: 1,
-                      });
-                    }}
+                    onClick={() => handlePrintBookLabels(book)}
                     className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition"
-                      title="Add to print-label queue"
+                    aria-label={`Print barcode labels for all ${book.totalCopies} copies of ${book.title}`}
+                    title={`Queue all ${book.totalCopies} copy labels and open Print labels`}
                   >
                     <Printer className="w-4 h-4" />
                   </button>}

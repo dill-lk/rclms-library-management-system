@@ -152,6 +152,7 @@ interface LibraryContextType {
   // Zebra ZD230 Label Buffer Queue (3-across)
   labelQueue: LabelQueueItem[];
   addToLabelQueue: (item: Omit<LabelQueueItem, 'id' | 'addedAt'>) => void;
+  addManyToLabelQueue: (items: Omit<LabelQueueItem, 'id' | 'addedAt'>[]) => void;
   removeFromLabelQueue: (id: string) => void;
   clearLabelQueue: () => void;
   flushNextLabelRow: () => LabelQueueItem[];
@@ -1973,6 +1974,22 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     });
   };
 
+  const addManyToLabelQueue = (items: Omit<LabelQueueItem, 'id' | 'addedAt'>[]) => {
+    if (items.length === 0) return;
+    const addedAt = new Date().toISOString();
+    const newItems: LabelQueueItem[] = items.map((item, index) => ({
+      ...item,
+      id: `lbl-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 6)}`,
+      addedAt,
+    }));
+    setLabelQueue((prev) => [...prev, ...newItems]);
+    addToast({
+      type: 'success',
+      title: 'Barcode labels ready',
+      message: `${newItems.length} ${newItems.length === 1 ? 'label is' : 'labels are'} queued for printing.`,
+    });
+  };
+
   const removeFromLabelQueue = (id: string) => {
     setLabelQueue((prev) => prev.filter((item) => item.id !== id));
   };
@@ -2067,6 +2084,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         clearAllData,
         labelQueue,
         addToLabelQueue,
+        addManyToLabelQueue,
         removeFromLabelQueue,
         clearLabelQueue,
         flushNextLabelRow,

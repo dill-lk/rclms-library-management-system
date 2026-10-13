@@ -22,7 +22,6 @@ interface CatalogueImportModalProps {
 interface ParsedBookRow {
   book_accession_number: string;
   book_title: string;
-  subtitle?: string;
   author_name: string;
   language_medium: string;
   ddc_code: string;
@@ -31,8 +30,6 @@ interface ParsedBookRow {
   publication_year?: number;
   edition?: string;
   shelf_identifier?: string;
-  synopsis_academic_notes?: string;
-  keywords?: string[];
   number_of_physical_copies_to_add: number;
   isValid: boolean;
   validationError?: string;
@@ -85,7 +82,6 @@ export const CatalogueImportModal: React.FC<CatalogueImportModalProps> = ({ isOp
     const headers = parseLine(lines[0]).map((h) => h.toLowerCase().trim());
     const accessionIdx = headers.findIndex((h) => h.includes('accession') || h.includes('isbn') || h.includes('barcode') || h.includes('parigahana'));
     const titleIdx = headers.findIndex((h) => h.includes('title') && !h.includes('sub'));
-    const subtitleIdx = headers.findIndex((h) => h.includes('sub'));
     const authorIdx = headers.findIndex((h) => h.includes('author'));
     const langIdx = headers.findIndex((h) => h.includes('lang'));
     const ddcIdx = headers.findIndex((h) => h.includes('ddc') || h.includes('code'));
@@ -94,8 +90,6 @@ export const CatalogueImportModal: React.FC<CatalogueImportModalProps> = ({ isOp
     const yearIdx = headers.findIndex((h) => h.includes('year'));
     const editionIdx = headers.findIndex((h) => h.includes('edition'));
     const shelfIdx = headers.findIndex((h) => h.includes('shelf') || h.includes('location'));
-    const notesIdx = headers.findIndex((h) => h.includes('synopsis') || h.includes('note') || h.includes('desc'));
-    const keywordsIdx = headers.findIndex((h) => h.includes('keyword') || h.includes('tag'));
     const copiesIdx = headers.findIndex((h) => h.includes('cop') || h.includes('stock') || h.includes('qty'));
 
     const seenAccessions = new Set<string>();
@@ -126,7 +120,6 @@ export const CatalogueImportModal: React.FC<CatalogueImportModalProps> = ({ isOp
       rows.push({
         book_accession_number: accession,
         book_title: title,
-        subtitle: subtitleIdx >= 0 ? cols[subtitleIdx] : undefined,
         author_name: author,
         language_medium: lang,
         ddc_code: ddc,
@@ -135,8 +128,6 @@ export const CatalogueImportModal: React.FC<CatalogueImportModalProps> = ({ isOp
         publication_year: year,
         edition: editionIdx >= 0 ? cols[editionIdx] : '1st Edition',
         shelf_identifier: shelfIdx >= 0 ? cols[shelfIdx] : 'Shelf A-01',
-        synopsis_academic_notes: notesIdx >= 0 ? cols[notesIdx] : '',
-        keywords: keywordsIdx >= 0 && cols[keywordsIdx] ? cols[keywordsIdx].split(',').map((k) => k.trim()) : [],
         number_of_physical_copies_to_add: copies,
         isValid: !error,
         validationError: error || undefined,
@@ -196,7 +187,6 @@ export const CatalogueImportModal: React.FC<CatalogueImportModalProps> = ({ isOp
               {
                 book_accession_number: row.book_accession_number,
                 book_title: row.book_title,
-                subtitle: row.subtitle,
                 author_name: row.author_name,
                 language_medium: row.language_medium,
                 ddc_code: row.ddc_code,
@@ -205,8 +195,6 @@ export const CatalogueImportModal: React.FC<CatalogueImportModalProps> = ({ isOp
                 publication_year: row.publication_year,
                 edition: row.edition,
                 shelf_identifier: row.shelf_identifier,
-                synopsis_academic_notes: row.synopsis_academic_notes,
-                keywords: row.keywords,
                 total_physical_copies: row.number_of_physical_copies_to_add,
                 available_physical_copies: row.number_of_physical_copies_to_add,
               },
@@ -240,7 +228,6 @@ export const CatalogueImportModal: React.FC<CatalogueImportModalProps> = ({ isOp
         // Also add to local in-memory store
         addBook({
           title: row.book_title,
-          subtitle: row.subtitle,
           author: row.author_name,
           isbn: row.book_accession_number,
           category: row.category_name,
@@ -251,9 +238,9 @@ export const CatalogueImportModal: React.FC<CatalogueImportModalProps> = ({ isOp
           totalCopies: row.number_of_physical_copies_to_add,
           shelfLocation: row.shelf_identifier || 'Shelf A-01',
           section: '',
-          description: row.synopsis_academic_notes || '',
+          description: '',
           rating: 4.8,
-          tags: row.keywords || [],
+          tags: [],
           copies: [],
         });
 
@@ -276,7 +263,7 @@ export const CatalogueImportModal: React.FC<CatalogueImportModalProps> = ({ isOp
   };
 
   const handleDownloadTemplate = () => {
-    const csvContent = `book_accession_number,book_title,subtitle,author_name,language_medium,ddc_code,category_name,publisher,publication_year,edition,shelf_identifier,synopsis_academic_notes,keywords,number_of_physical_copies_to_add\nRC-BK-7784,Madol Doova (මඩොල් දූව),The Classic Tale of Upali and Jinna,Martin Wickramasinghe,Sinhala (සිංහල),891.483,Sinhala Literature,Sarasavi Publishers,2026,1st Edition,Shelf A-01,Brief overview of the book topics or syllabus relevance.,"Sinhala literature, Sri Lankan fiction, school reading",1\n`;
+    const csvContent = `book_accession_number,book_title,author_name,language_medium,ddc_code,category_name,publisher,publication_year,edition,shelf_identifier,number_of_physical_copies_to_add\nRC-BK-7784,Madol Doova (මඩොල් දූව),Martin Wickramasinghe,Sinhala (සිංහල),891.483,Sinhala Literature,Sarasavi Publishers,2026,1st Edition,Shelf A-01,1\n`;
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
