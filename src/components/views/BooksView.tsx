@@ -226,17 +226,6 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
                   <span>Import CSV</span>
                 </button>
               )}
-              {canManageDuplicates && (
-                <button type="button" role="menuitem" onClick={(event) => { event.currentTarget.closest('details')?.removeAttribute('open'); setShowDuplicateReview(true); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-700 transition hover:bg-neutral-100">
-                  <Copy className="h-4 w-4" />
-                  <span>Review duplicates</span>
-                </button>
-              )}
-              <div className="my-1 border-t border-neutral-200" />
-              <button type="button" role="menuitem" onClick={(event) => { event.currentTarget.closest('details')?.removeAttribute('open'); setShowArchived((value) => !value); setCurrentPage(1); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-700 transition hover:bg-neutral-100">
-                {showArchived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                <span>{showArchived ? 'Back to books' : 'Archived books'}</span>
-              </button>
             </div>
           </details>
         </div>
