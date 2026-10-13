@@ -90,7 +90,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
       case 'inventory':
         return { title: 'Stock Audit · Beta', desc: 'Verify physical copies by barcode' };
       case 'reminders':
-        return { title: 'Due & overdue reminders · Beta', desc: 'Review open loans that need follow-up' };
+        return { title: 'Overdue & renewal reminders · Beta', desc: 'Live in-app follow-up from open loan records' };
       case 'data_safety':
         return { title: 'Backups & audit log · Beta', desc: 'Download a verified backup and review staff activity' };
       case 'reports':

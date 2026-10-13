@@ -53,7 +53,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     setIsCommandPaletteOpen,
   } = useLibrary();
 
-  const overdueCount = circulation.filter((c) => c.status === 'overdue').length;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const followUpCounts = circulation.reduce((counts, loan) => {
+    if (!['active', 'overdue', 'renewed'].includes(loan.status)) return counts;
+    const due = new Date(`${loan.dueDate.slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(due.getTime())) return counts;
+    const days = Math.round((due.getTime() - today.getTime()) / 86_400_000);
+    if (days < 0) counts.overdue += 1;
+    else if (days <= 7) counts.dueSoon += 1;
+    return counts;
+  }, { overdue: 0, dueSoon: 0 });
+  const overdueCount = followUpCounts.overdue;
+  const reminderCount = followUpCounts.overdue + followUpCounts.dueSoon;
   const pendingReservations = reservations.filter((r) => r.status === 'pending' || r.status === 'ready').length;
 
   const navGroups: { title: string; items: NavItem[] }[] = [
@@ -87,9 +99,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     {
       title: 'Circulation',
       items: [
+        { id: 'reminders', label: 'Due & overdue reminders', icon: BellRing, beta: true, badge: reminderCount > 0 ? reminderCount : undefined, badgeColor: overdueCount > 0 ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' },
         { id: 'borrow', label: 'Issue a book', icon: BookMarked, beta: true },
         { id: 'returns', label: 'Return a book', icon: ArrowRightLeft, beta: true },
-        { id: 'reminders', label: 'Due & overdue reminders', icon: BellRing, beta: true, badge: overdueCount > 0 ? overdueCount : undefined, badgeColor: 'bg-rose-500/20 text-rose-300 border border-rose-500/30' },
         {
           id: 'reservations',
           label: 'Reservations',

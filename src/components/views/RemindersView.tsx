@@ -6,7 +6,7 @@ import { BetaBadge } from '../common/BetaBadge';
 const dayStart = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
 
 export const RemindersView: React.FC = () => {
-  const { circulation, setActiveTab } = useLibrary();
+  const { circulation, setActiveTab, setSelectedMemberId } = useLibrary();
   const now = new Date();
   const today = dayStart(now);
   const reminders = useMemo(() => circulation
@@ -22,6 +22,10 @@ export const RemindersView: React.FC = () => {
   const dueSoon = reminders.filter(({ days }) => (days ?? 0) >= 0);
 
   const openReturns = () => setActiveTab('returns');
+  const openMemberLoans = (memberId: string) => {
+    setSelectedMemberId(memberId);
+    setActiveTab('member_profile');
+  };
   const list = (items: typeof reminders, isOverdue: boolean) => items.length ? (
     <ul className="divide-y divide-slate-100 dark:divide-slate-800">
       {items.map(({ loan, days }) => (
@@ -35,7 +39,7 @@ export const RemindersView: React.FC = () => {
             <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${isOverdue ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-200' : 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200'}`}>
               {isOverdue ? `${Math.abs(days ?? 0)} day${Math.abs(days ?? 0) === 1 ? '' : 's'} overdue` : days === 0 ? 'Due today' : `Due in ${days} day${days === 1 ? '' : 's'}`}
             </span>
-            <button type="button" onClick={openReturns} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Review <ArrowRight className="h-3.5 w-3.5" /></button>
+            <button type="button" onClick={() => openMemberLoans(loan.memberId)} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Loan options <ArrowRight className="h-3.5 w-3.5" /></button>
           </div>
         </li>
       ))}
