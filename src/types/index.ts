@@ -218,7 +218,7 @@ export interface UserAccount {
   grade?: string;
   phone?: string;
   lastLogin: string;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'pending' | 'suspended';
   permissions: string[];
 }
 

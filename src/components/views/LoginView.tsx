@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { SiteAttribution } from '../common/SiteAttribution';
-import { UserRole } from '../../types';
 import {
   Eye,
   EyeOff,
@@ -22,13 +21,13 @@ interface LoginViewProps {
 export const LoginView: React.FC<LoginViewProps> = ({ onBackToPortals }) => {
   const {
     loginWithCredentials,
-    registerUser,
+    requestStaffAccess,
     resetPassword,
     completeSetupWizard,
   } = useLibrary();
 
-  // Active Auth Tab: 'login' | 'signup' | 'setup_wizard' | 'forgot_password'
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'setup_wizard' | 'forgot_password'>('login');
+  // Staff signup creates a pending request; only the main administrator can approve it.
+  const [authMode, setAuthMode] = useState<'login' | 'admin_signup' | 'setup_wizard' | 'forgot_password'>('login');
 
   // Login Form State
   const [loginEmail, setLoginEmail] = useState('');
@@ -42,10 +41,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onBackToPortals }) => {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPass, setSignupConfirmPass] = useState('');
-  const [signupRole, setSignupRole] = useState<UserRole>('student');
-  const [signupGrade, setSignupGrade] = useState('Grade 12');
-  const [signupAdmissionNo, setSignupAdmissionNo] = useState('');
+  const [signupDesignation, setSignupDesignation] = useState('');
   const [signupError, setSignupError] = useState('');
+  const [signupSuccess, setSignupSuccess] = useState('');
 
   // Setup Wizard State
   const [adminName, setAdminName] = useState('');
@@ -82,6 +80,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onBackToPortals }) => {
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignupError('');
+    setSignupSuccess('');
 
     if (!signupName.trim() || !signupEmail.trim() || !signupPassword.trim()) {
       setSignupError('All required fields must be filled.');
@@ -100,18 +99,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onBackToPortals }) => {
 
     setIsSubmitting(true);
     try {
-      const res = await registerUser({
+      const res = await requestStaffAccess({
         name: signupName,
         email: signupEmail,
         password: signupPassword,
-        role: signupRole,
-        admissionNo: signupAdmissionNo || undefined,
-        grade: signupRole === 'student' ? signupGrade : undefined,
-        designation: signupRole === 'teacher' ? 'Faculty Member' : signupRole === 'librarian' ? 'Librarian' : undefined,
+        designation: signupDesignation || undefined,
       });
 
       if (!res.success) {
         setSignupError(res.message);
+      } else {
+        setSignupSuccess(res.message);
       }
     } finally {
       setIsSubmitting(false);
@@ -189,17 +187,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onBackToPortals }) => {
         <div className="login-card-header text-center space-y-3">
           <div className="space-y-1">
             <h1 className="text-xl font-bold tracking-tight text-neutral-950">
-              {authMode === 'login' ? 'Welcome back' : authMode === 'signup' ? 'Join the library' : authMode === 'forgot_password' ? 'Reset your password' : 'Welcome'}
+              {authMode === 'login' ? 'Welcome back' : authMode === 'admin_signup' ? 'Request staff access' : authMode === 'forgot_password' ? 'Reset your password' : 'Welcome'}
             </h1>
             <p className="text-xs text-neutral-500">
-              {authMode === 'login' ? 'Sign in and pick up where you left off.' : authMode === 'signup' ? 'Create an account to get started.' : authMode === 'forgot_password' ? 'We’ll help you get back in.' : 'Rahula College Library'}
+              {authMode === 'login' ? 'Sign in and pick up where you left off.' : authMode === 'admin_signup' ? 'Submit a request for administrator review.' : authMode === 'forgot_password' ? 'We’ll help you get back in.' : 'Rahula College Library'}
             </p>
           </div>
         </div>
 
-        {/* Auth Mode Tabs: Sign In / Create Account */}
+        {/* Auth Mode Tabs: Sign In / Request Access */}
         {authMode !== 'setup_wizard' && authMode !== 'forgot_password' && (
-          <div className="grid grid-cols-1 p-1 bg-neutral-100 rounded-xl border border-neutral-200 text-xs font-semibold">
+          <div className="grid grid-cols-2 p-1 bg-neutral-100 rounded-xl border border-neutral-200 text-xs font-semibold">
             <button
               onClick={() => {
                 setAuthMode('login');
@@ -212,6 +210,20 @@ export const LoginView: React.FC<LoginViewProps> = ({ onBackToPortals }) => {
               }`}
             >
               Sign In
+            </button>
+            <button
+              onClick={() => {
+                setAuthMode('admin_signup');
+                setSignupError('');
+                setSignupSuccess('');
+              }}
+              className={`py-2 rounded-xl transition ${
+                authMode === 'admin_signup'
+                  ? 'bg-library-action text-library-bg shadow-xs font-bold border border-library-border'
+                  : 'text-library-muted hover:text-library-main'
+              }`}
+            >
+              Request Access
             </button>
           </div>
         )}
@@ -296,9 +308,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onBackToPortals }) => {
           </form>
         )}
 
-        {/* 2. REGISTRATION FORM */}
-        {authMode === 'signup' && (
+        {/* 2. PENDING STAFF ACCESS REQUEST FORM */}
+        {authMode === 'admin_signup' && (
           <form onSubmit={handleSignupSubmit} className="space-y-4">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
+              Your request starts with no management permissions. The existing super administrator must approve it and assign an allowed staff role before you can use admin tools.
+            </div>
             <div className="space-y-1">
               <label htmlFor="reg-name" className="block text-xs font-bold text-neutral-700">
                 Full Name *
@@ -317,31 +332,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ onBackToPortals }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="block text-xs font-bold text-neutral-700">Role</label>
-                <select
-                  value={signupRole}
-                  onChange={(e) => setSignupRole(e.target.value as UserRole)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="student">Student (ශිෂ්‍ය)</option>
-                  <option value="teacher">Teacher (ගුරුභවතා)</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-xs font-bold text-neutral-700">
-                  {signupRole === 'student' ? 'Admission No' : 'Staff ID'}
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 23456"
-                  value={signupAdmissionNo}
-                  onChange={(e) => setSignupAdmissionNo(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs font-mono focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-neutral-700">Position / Department (optional)</label>
+              <input
+                type="text"
+                value={signupDesignation}
+                onChange={(e) => setSignupDesignation(e.target.value)}
+                placeholder="e.g. Library Assistant"
+                className="w-full px-3 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-950 text-xs focus:ring-2 focus:ring-indigo-500"
+              />
             </div>
 
             <div className="space-y-1">
@@ -395,12 +394,19 @@ export const LoginView: React.FC<LoginViewProps> = ({ onBackToPortals }) => {
               </div>
             )}
 
+            {signupSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs leading-relaxed flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{signupSuccess}</span>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || Boolean(signupSuccess)}
               className="w-full py-3 rounded-xl bg-white hover:bg-neutral-200 text-black font-bold text-xs tracking-wide shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <span>{isSubmitting ? 'Registering...' : 'Create Account'}</span>
+              <span>{isSubmitting ? 'Sending request...' : 'Request Staff Access'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>

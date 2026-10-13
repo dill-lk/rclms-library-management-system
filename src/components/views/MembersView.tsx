@@ -27,6 +27,7 @@ export const MembersView: React.FC = () => {
   const {
     members,
     settings,
+    currentUser,
     addMember,
     updateMember,
     deleteMember,
@@ -44,6 +45,8 @@ export const MembersView: React.FC = () => {
 
   // Add Member Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [isSavingMember, setIsSavingMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberType, setNewMemberType] = useState<MemberType>('student');
   const [newMemberEmail, setNewMemberEmail] = useState('');
@@ -112,7 +115,6 @@ export const MembersView: React.FC = () => {
       type: newMemberType,
       grade: undefined,
       department: undefined,
-      house: undefined,
       email: newMemberEmail || `${newMemberName.toLowerCase().replace(/\s+/g, '.')}@rahulacollege.lk`,
       phone: newMemberPhone,
       address: newMemberAddress,
@@ -125,6 +127,25 @@ export const MembersView: React.FC = () => {
     setIsAddModalOpen(false);
     setNewMemberName('');
     setNewMemberEmail('');
+  };
+
+  const handleSaveMember = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingMember) return;
+    setIsSavingMember(true);
+    const result = await updateMember({
+      ...editingMember,
+      name: editingMember.name.trim(),
+      memberId: editingMember.memberId.trim(),
+      admissionNo: editingMember.admissionNo?.trim() || editingMember.memberId.trim(),
+      email: editingMember.email.trim(),
+      phone: editingMember.phone.trim(),
+      address: editingMember.address.trim(),
+      grade: editingMember.grade?.trim() || undefined,
+      department: editingMember.department?.trim() || undefined,
+    });
+    setIsSavingMember(false);
+    if (result.success) setEditingMember(null);
   };
 
   return (
@@ -382,6 +403,16 @@ export const MembersView: React.FC = () => {
                       >
                         <Eye className="w-4 h-4" />
                       </button>
+                      {currentUser.permissions.includes('manage_members') && (
+                        <button
+                          onClick={() => setEditingMember({ ...member })}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+                          title="Edit member details"
+                          aria-label={`Edit ${member.name}`}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           if (confirm(`Remove ${member.name} from library registration?`)) {
@@ -543,6 +574,171 @@ export const MembersView: React.FC = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(editingMember)}
+        onClose={() => !isSavingMember && setEditingMember(null)}
+        title="Edit Member Details"
+        subtitle="Authorized library staff can update the official member record."
+        size="lg"
+      >
+        {editingMember && (
+          <form onSubmit={handleSaveMember} className="space-y-4 text-xs">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block font-bold text-gray-700 dark:text-gray-300">
+                Full Name <span className="text-red-500">*</span>
+                <input
+                  required
+                  maxLength={120}
+                  value={editingMember.name}
+                  onChange={(event) => setEditingMember({ ...editingMember, name: event.target.value })}
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </label>
+              <label className="block font-bold text-gray-700 dark:text-gray-300">
+                Member ID <span className="text-red-500">*</span>
+                <input
+                  required
+                  maxLength={80}
+                  value={editingMember.memberId}
+                  onChange={(event) => setEditingMember({ ...editingMember, memberId: event.target.value })}
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-gray-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </label>
+              <label className="block font-bold text-gray-700 dark:text-gray-300">
+                Admission / Staff No <span className="text-red-500">*</span>
+                <input
+                  required
+                  maxLength={80}
+                  value={editingMember.admissionNo || ''}
+                  onChange={(event) => setEditingMember({ ...editingMember, admissionNo: event.target.value })}
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-gray-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </label>
+              <label className="block font-bold text-gray-700 dark:text-gray-300">
+                Member Type
+                <select
+                  value={editingMember.type}
+                  onChange={(event) => setEditingMember({ ...editingMember, type: event.target.value as MemberType })}
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                >
+                  <option value="student">Student</option>
+                  <option value="teacher">Teacher</option>
+                  <option value="staff">Staff</option>
+                </select>
+              </label>
+              <label className="block font-bold text-gray-700 dark:text-gray-300">
+                Grade
+                <input
+                  maxLength={80}
+                  value={editingMember.grade || ''}
+                  onChange={(event) => setEditingMember({ ...editingMember, grade: event.target.value })}
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </label>
+              <label className="block font-bold text-gray-700 dark:text-gray-300">
+                Department
+                <input
+                  maxLength={120}
+                  value={editingMember.department || ''}
+                  onChange={(event) => setEditingMember({ ...editingMember, department: event.target.value })}
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </label>
+              <label className="block font-bold text-gray-700 dark:text-gray-300">
+                Email
+                <input
+                  type="email"
+                  maxLength={254}
+                  value={editingMember.email}
+                  onChange={(event) => setEditingMember({ ...editingMember, email: event.target.value })}
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </label>
+              <label className="block font-bold text-gray-700 dark:text-gray-300">
+                Phone
+                <input
+                  type="tel"
+                  maxLength={40}
+                  value={editingMember.phone}
+                  onChange={(event) => setEditingMember({ ...editingMember, phone: event.target.value })}
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </label>
+              <label className="block font-bold text-gray-700 dark:text-gray-300">
+                Joined Date
+                <input
+                  type="date"
+                  value={editingMember.joinedDate || ''}
+                  onChange={(event) => setEditingMember({ ...editingMember, joinedDate: event.target.value })}
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </label>
+              <label className="block font-bold text-gray-700 dark:text-gray-300">
+                Expiry Date
+                <input
+                  type="date"
+                  value={editingMember.expiryDate || ''}
+                  onChange={(event) => setEditingMember({ ...editingMember, expiryDate: event.target.value })}
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </label>
+              <label className="block font-bold text-gray-700 dark:text-gray-300">
+                Status
+                <select
+                  value={editingMember.status}
+                  onChange={(event) => setEditingMember({ ...editingMember, status: event.target.value as Member['status'] })}
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                >
+                  {editingMember.status === 'graduated' && <option value="graduated">Graduated</option>}
+                  <option value="active">Active</option>
+                  <option value="suspended">Suspended</option>
+                  <option value="expired">Expired</option>
+                </select>
+              </label>
+              <label className="block font-bold text-gray-700 dark:text-gray-300">
+                Borrow Limit
+                <input
+                  type="number"
+                  min={1}
+                  max={99}
+                  required
+                  value={editingMember.maxBorrowLimit}
+                  onChange={(event) => setEditingMember({ ...editingMember, maxBorrowLimit: Number(event.target.value) })}
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </label>
+            </div>
+            <label className="block font-bold text-gray-700 dark:text-gray-300">
+              Residential Address
+              <textarea
+                rows={2}
+                maxLength={500}
+                value={editingMember.address}
+                onChange={(event) => setEditingMember({ ...editingMember, address: event.target.value })}
+                className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              />
+            </label>
+            <div className="flex items-center justify-end gap-2 border-t border-gray-100 pt-4 dark:border-slate-800">
+              <button
+                type="button"
+                disabled={isSavingMember}
+                onClick={() => setEditingMember(null)}
+                className="rounded-xl px-4 py-2 font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-50 dark:text-gray-300 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSavingMember}
+                className="rounded-xl bg-maroon-800 px-5 py-2 font-bold text-white shadow-card transition hover:bg-maroon-900 disabled:opacity-50"
+              >
+                {isSavingMember ? 'Saving…' : 'Save Member Details'}
+              </button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );

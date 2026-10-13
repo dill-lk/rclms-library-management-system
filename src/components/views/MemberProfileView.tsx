@@ -143,11 +143,6 @@ export const MemberProfileView: React.FC<MemberProfileViewProps> = ({ onBack }) 
                 </span>
                 {member.admissionNo && <span>• Adm: #{member.admissionNo}</span>}
                 {(member.grade || member.department) && <span>• {member.grade || member.department}</span>}
-                {member.house && (
-                  <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">
-                    {member.house} House
-                  </span>
-                )}
               </div>
             </div>
           </div>

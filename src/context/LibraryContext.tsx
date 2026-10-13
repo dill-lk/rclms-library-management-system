@@ -93,6 +93,7 @@ interface LibraryContextType {
   isLoggedIn: boolean;
   login: (user: UserAccount) => void;
   loginWithCredentials: (email: string, password: string, audience?: 'borrower' | 'staff') => Promise<{ success: boolean; message: string; user?: UserAccount }>;
+  requestStaffAccess: (userData: { name: string; email: string; password: string; designation?: string }) => Promise<{ success: boolean; message: string }>;
   registerUser: (userData: { name: string; email: string; password: string; role: UserRole; designation?: string; admissionNo?: string; grade?: string; phone?: string }) => Promise<{ success: boolean; message: string; user?: UserAccount }>;
   resetPassword: (email: string) => Promise<{ success: boolean; message: string }>;
   completeSetupWizard: (setupData: { adminName: string; adminEmail: string; adminPass: string; libraryName: string; campusAddress: string; phone: string; seedCatalog: boolean }) => void;
@@ -122,7 +123,7 @@ interface LibraryContextType {
 
   // Actions - Members
   addMember: (member: Omit<Member, 'id' | 'currentlyBorrowedCount' | 'totalBorrowedCount' | 'overdueCount' | 'unpaidFines'>) => Promise<void>;
-  updateMember: (member: Member) => void;
+  updateMember: (member: Member) => Promise<{ success: boolean; message: string }>;
   deleteMember: (memberId: string) => void;
 
   // Actions - Circulation
@@ -570,7 +571,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
           role,
           designation: p.department || defaultDesignations[role],
           lastLogin: p.last_login_at ? new Date(p.last_login_at).toLocaleString() : 'Never',
-          status: 'active',
+          status: (p.status || 'active') as UserAccount['status'],
           permissions: permissionsForRole(role),
         };
       }));
@@ -723,7 +724,13 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
             return { success: false, message: 'No library profile is linked to this account. Ask an authorized librarian to review the account before signing in.' };
           }
           if (profile && profile.status !== 'active') {
-            return { success: false, message: 'This library account is inactive. Contact an authorized librarian for help.' };
+            await supabase.auth.signOut({ scope: 'local' });
+            return {
+              success: false,
+              message: profile.status === 'pending'
+                ? 'Your staff access request is pending review by the main administrator. You will not have library-management access until an allowed staff role is approved.'
+                : 'This library account is inactive. Contact an authorized librarian for help.',
+            };
           }
 
           const allowedRoles: UserRole[] = ['super_admin', 'librarian', 'assistant_librarian', 'teacher', 'student', 'staff'];
@@ -774,6 +781,34 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
 
     return { success: false, message: 'Supabase is not available in this deployment. Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then rebuild the app.' };
+  };
+
+  const requestStaffAccess = async (userData: {
+    name: string;
+    email: string;
+    password: string;
+    designation?: string;
+  }): Promise<{ success: boolean; message: string }> => {
+    const name = userData.name.trim();
+    const email = userData.email.trim().toLowerCase();
+    const supabase = getSupabase();
+    if (!supabase) return { success: false, message: 'Staff access requests are unavailable until the secure library service is configured.' };
+
+    try {
+      const { data, error } = await supabase.functions.invoke('request-staff-access', {
+        body: {
+          name,
+          email,
+          password: userData.password,
+          designation: userData.designation?.trim() || undefined,
+        },
+      });
+      if (error) return { success: false, message: error.message || 'The staff access request could not be sent. Try again later.' };
+      if (data?.success !== true) return { success: false, message: data?.message || 'The staff access request could not be completed.' };
+      return { success: true, message: data.message || 'Your request is pending review by the main administrator.' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'The staff access request could not be sent. Try again later.' };
+    }
   };
 
   const registerUser = async (userData: {
@@ -897,18 +932,60 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const updateUserRole = async (userId: string, role: UserAccount['role']) => {
+    const assignableRoles: UserRole[] = ['librarian', 'assistant_librarian', 'teacher', 'student', 'staff'];
+    if (!assignableRoles.includes(role)) {
+      const message = 'Super administrator access cannot be created or assigned from account management.';
+      addToast({ type: 'error', title: 'Role was not changed', message });
+      return { success: false, message };
+    }
+
+    const target = users.find((user) => user.id === userId);
     const supabase = getSupabase();
-    if (supabase && userId && !userId.startsWith('usr-')) {
-      const { error } = await supabase.from('profiles').update({ role }).eq('id', userId);
+    if (target?.status === 'pending') {
+      if (currentUser.role !== 'super_admin' || userId === currentUser.id) {
+        const message = 'Only the main super administrator may approve another user’s pending staff request.';
+        addToast({ type: 'error', title: 'Staff request was not approved', message });
+        return { success: false, message };
+      }
+      if (role !== 'librarian' && role !== 'assistant_librarian') {
+        const message = 'Pending requests can only be approved as Librarian or Assistant Librarian.';
+        addToast({ type: 'error', title: 'Staff request was not approved', message });
+        return { success: false, message };
+      }
+      if (!supabase) {
+        const message = 'The library database is unavailable; this request was not approved.';
+        addToast({ type: 'error', title: 'Staff request was not approved', message });
+        return { success: false, message };
+      }
+      const { error } = await supabase.rpc('approve_pending_staff_signup', {
+        p_profile_id: userId,
+        p_assigned_role: role,
+      });
       if (error) {
-        addToast({ type: 'error', title: 'Role was not changed', message: error.message });
+        addToast({ type: 'error', title: 'Staff request was not approved', message: error.message });
         return { success: false, message: error.message };
+      }
+      setUsers((prev) => prev.map((user) => user.id === userId
+        ? { ...user, role, status: 'active', permissions: permissionsForRole(role) }
+        : user));
+      await writeAuditEvent('staff_signup_approved', 'profiles', userId, { role });
+      addToast({ type: 'success', title: 'Staff access approved', message: `${target.name} was approved as ${role === 'librarian' ? 'Librarian' : 'Assistant Librarian'}.` });
+      return { success: true, message: 'Staff access approved.' };
+    }
+
+    if (supabase && userId && !userId.startsWith('usr-')) {
+      const { data, error } = await supabase.from('profiles').update({ role }).eq('id', userId).select('id').maybeSingle();
+      if (error || !data) {
+        const message = error?.message || 'The staff profile was not found or could not be updated.';
+        addToast({ type: 'error', title: 'Role was not changed', message });
+        return { success: false, message };
       }
     } else if (isSupabaseConfigured) {
       const message = 'This staff record is not linked to a Supabase Auth account.';
       addToast({ type: 'error', title: 'Role was not changed', message });
       return { success: false, message };
     }
+
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role, permissions: permissionsForRole(role) } : u)));
     addToast({ type: 'success', title: 'Role updated', message: 'The staff member’s access has been updated.' });
     return { success: true, message: 'Role updated.' };
@@ -1190,7 +1267,6 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         type: memberData.type,
         grade: memberData.grade,
         department: memberData.department,
-        house: memberData.house,
         email: memberData.email,
         phone: memberData.phone,
         address: memberData.address,
@@ -1210,34 +1286,85 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     addToast({ type: 'success', title: 'Member registered', message: `${newMember.name} (${newMember.memberId}) is ready to borrow books.` });
   };
 
-  const updateMember = async (updatedMember: Member) => {
-    setMembers((prev) => prev.map((m) => (m.id === updatedMember.id ? updatedMember : m)));
+  const updateMember = async (updatedMember: Member): Promise<{ success: boolean; message: string }> => {
+    const name = updatedMember.name.trim();
+    const memberId = updatedMember.memberId.trim();
+    const admissionNo = updatedMember.admissionNo?.trim() || memberId;
+    if (!name || !memberId || !admissionNo) {
+      const message = 'Member name, member ID, and admission/staff number are required.';
+      addToast({ type: 'error', title: 'Member was not updated', message });
+      return { success: false, message };
+    }
 
+    let savedMember: Member = { ...updatedMember, name, memberId, admissionNo };
     const supabase = getSupabase();
+    if (isSupabaseConfigured && (!supabase || updatedMember.id.startsWith('mem-'))) {
+      const message = 'The member is not linked to the library database; no changes were saved.';
+      addToast({ type: 'error', title: 'Member was not updated', message });
+      return { success: false, message };
+    }
+
     if (supabase && !updatedMember.id.startsWith('mem-')) {
       try {
-        await supabase
+        const { data, error } = await supabase
           .from('members')
           .update({
-            name: updatedMember.name,
+            member_id: memberId,
+            admission_no: admissionNo,
+            name,
+            type: updatedMember.type,
             grade: updatedMember.grade,
             department: updatedMember.department,
+            email: updatedMember.email,
             phone: updatedMember.phone,
             address: updatedMember.address,
+            joined_date: updatedMember.joinedDate || null,
+            expiry_date: updatedMember.expiryDate || null,
             status: updatedMember.status,
             max_borrow_limit: updatedMember.maxBorrowLimit,
           })
-          .eq('id', updatedMember.id);
-      } catch (err) {
-        console.warn('Supabase member update error:', err);
+          .eq('id', updatedMember.id)
+          .select('*')
+          .maybeSingle();
+        if (error || !data) {
+          const message = error?.message || 'The member was not found or your staff role cannot edit this record.';
+          addToast({ type: 'error', title: 'Member was not updated', message });
+          return { success: false, message };
+        }
+        savedMember = {
+          ...updatedMember,
+          id: data.id,
+          memberId: data.member_id,
+          admissionNo: data.admission_no,
+          name: data.name,
+          type: data.type,
+          grade: data.grade || undefined,
+          department: data.department || undefined,
+          email: data.email || '',
+          phone: data.phone || '',
+          address: data.address || '',
+          joinedDate: data.joined_date || '',
+          expiryDate: data.expiry_date || '',
+          status: data.status,
+          maxBorrowLimit: Number(data.max_borrow_limit || updatedMember.maxBorrowLimit),
+        };
+      } catch (err: any) {
+        const message = err?.message || 'The member could not be updated. Try again.';
+        addToast({ type: 'error', title: 'Member was not updated', message });
+        return { success: false, message };
       }
     }
 
+    setMembers((prev) => prev.map((member) => (member.id === savedMember.id ? savedMember : member)));
+    await writeAuditEvent('member_profile_updated', 'members', savedMember.id, {
+      changedFields: ['member_id', 'admission_no', 'name', 'type', 'grade', 'department', 'email', 'phone', 'address', 'joined_date', 'expiry_date', 'status', 'max_borrow_limit'],
+    });
     addToast({
       type: 'success',
       title: 'Member Profile Updated',
-      message: `${updatedMember.name} details saved.`,
+      message: `${savedMember.name} details saved.`,
     });
+    return { success: true, message: 'Member details saved.' };
   };
 
   const deleteMember = async (memberId: string) => {
@@ -2271,6 +2398,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         isLoggedIn,
         login,
         loginWithCredentials,
+        requestStaffAccess,
         registerUser,
         resetPassword,
         completeSetupWizard,

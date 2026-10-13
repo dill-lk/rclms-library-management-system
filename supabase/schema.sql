@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     department TEXT,
     phone TEXT,
     avatar_url TEXT,
-    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended', 'pending')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS public.members (
     type TEXT NOT NULL CHECK (type IN ('student', 'teacher', 'staff')),
     grade TEXT,
     department TEXT,
-    house TEXT DEFAULT 'Rahula',
+    house TEXT,
     email TEXT,
     phone TEXT,
     address TEXT,
@@ -338,6 +338,9 @@ DROP POLICY IF EXISTS "Users Update Own Profile" ON public.profiles;
 DROP POLICY IF EXISTS "Admin Manage Profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Users Create Own Basic Profile" ON public.profiles;
 CREATE POLICY "Users Read Profiles" ON public.profiles FOR SELECT TO authenticated USING (auth.uid() = id OR public.is_library_admin());
+DROP POLICY IF EXISTS "Users Read Own Pending Staff Request" ON public.profiles;
+CREATE POLICY "Users Read Own Pending Staff Request" ON public.profiles FOR SELECT TO authenticated
+  USING (id = (SELECT auth.uid()) AND role = 'staff' AND status = 'pending');
 CREATE POLICY "Users Update Own Profile" ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users Create Own Basic Profile" ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id AND role IN ('student', 'teacher') AND status = 'active');
 CREATE POLICY "Admin Manage Profiles" ON public.profiles FOR ALL TO authenticated USING (public.is_library_admin()) WITH CHECK (public.is_library_admin());
@@ -424,12 +427,24 @@ SET search_path = ''
 AS $$
 BEGIN
   IF auth.uid() IS NULL THEN RETURN NEW; END IF;
-  IF OLD.id IS DISTINCT FROM auth.uid() AND NOT public.is_library_admin() THEN
-    RAISE EXCEPTION 'Only a library administrator may update another profile.';
+  IF OLD.id IS DISTINCT FROM auth.uid() AND NOT public.is_super_admin() THEN
+    RAISE EXCEPTION 'Only a super administrator may update another profile.';
   END IF;
-  IF (NEW.role IS DISTINCT FROM OLD.role OR NEW.status IS DISTINCT FROM OLD.status)
-     AND NOT public.is_library_admin() THEN
-    RAISE EXCEPTION 'You cannot change your own role or account status.';
+  IF OLD.id = auth.uid()
+     AND (to_jsonb(NEW) - ARRAY['full_name','phone','updated_at'])
+         IS DISTINCT FROM (to_jsonb(OLD) - ARRAY['full_name','phone','updated_at']) THEN
+    RAISE EXCEPTION 'You may update only your own name and phone number.';
+  END IF;
+  IF OLD.status = 'pending'
+     AND (NEW.role IS DISTINCT FROM OLD.role OR NEW.status IS DISTINCT FROM OLD.status) THEN
+    IF OLD.id = auth.uid() THEN RAISE EXCEPTION 'A staff access request cannot approve itself.'; END IF;
+    IF NOT public.is_super_admin() THEN RAISE EXCEPTION 'Only the super administrator may review a staff access request.'; END IF;
+    IF NEW.status = 'active' AND NEW.role NOT IN ('librarian', 'assistant_librarian') THEN
+      RAISE EXCEPTION 'A staff request must be approved with an allowed library staff role.';
+    END IF;
+  END IF;
+  IF NEW.role = 'super_admin' AND OLD.role IS DISTINCT FROM 'super_admin' THEN
+    RAISE EXCEPTION 'Super administrator accounts cannot be created or promoted through profile management.';
   END IF;
   IF (OLD.role = 'super_admin' OR NEW.role = 'super_admin')
      AND NOT public.is_super_admin() THEN
@@ -442,3 +457,32 @@ DROP TRIGGER IF EXISTS trg_guard_profile_privilege_changes ON public.profiles;
 CREATE TRIGGER trg_guard_profile_privilege_changes
 BEFORE UPDATE ON public.profiles
 FOR EACH ROW EXECUTE FUNCTION public.guard_profile_privilege_changes();
+
+CREATE OR REPLACE FUNCTION public.approve_pending_staff_signup(p_profile_id UUID, p_assigned_role TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_super_admin() THEN
+    RAISE EXCEPTION 'Only the active super administrator may approve staff access requests.';
+  END IF;
+  IF p_profile_id IS NULL OR p_profile_id = auth.uid() THEN
+    RAISE EXCEPTION 'A super administrator cannot approve their own access request.';
+  END IF;
+  IF p_assigned_role NOT IN ('librarian', 'assistant_librarian') THEN
+    RAISE EXCEPTION 'Choose an allowed library staff role.';
+  END IF;
+
+  UPDATE public.profiles
+  SET role = p_assigned_role, status = 'active', updated_at = timezone('utc'::text, now())
+  WHERE id = p_profile_id AND role = 'staff' AND status = 'pending';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'This pending staff request no longer exists or has already been reviewed.';
+  END IF;
+  RETURN TRUE;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.approve_pending_staff_signup(UUID, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.approve_pending_staff_signup(UUID, TEXT) TO authenticated;

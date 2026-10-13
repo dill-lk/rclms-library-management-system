@@ -373,7 +373,7 @@ CREATE TABLE IF NOT EXISTS public.members (
     type TEXT NOT NULL CHECK (type IN ('student', 'teacher', 'staff')),
     grade TEXT,
     department TEXT,
-    house TEXT DEFAULT 'Rahula',
+    house TEXT,
     email TEXT,
     phone TEXT,
     address TEXT,

@@ -25,6 +25,14 @@ export const UsersView: React.FC = () => {
   const [userEmail, setUserEmail] = useState('');
   const [userRole, setUserRole] = useState<UserRole>('assistant_librarian');
   const [userDesignation, setUserDesignation] = useState('');
+  const [approvalRoles, setApprovalRoles] = useState<Record<string, 'librarian' | 'assistant_librarian'>>({});
+  const isSuperAdmin = currentUser.role === 'super_admin';
+  const pendingRequests = users.filter((user) => user.status === 'pending');
+
+  const handleApproveRequest = async (user: UserAccount) => {
+    const role = approvalRoles[user.id] || 'assistant_librarian';
+    await updateUserRole(user.id, role);
+  };
 
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +83,13 @@ export const UsersView: React.FC = () => {
         </button>
       </div>
 
+      {isSuperAdmin && pendingRequests.length > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200">
+          <div className="font-bold">{pendingRequests.length} staff access request{pendingRequests.length === 1 ? '' : 's'} awaiting your review.</div>
+          <p className="mt-1">Choose Librarian or Assistant Librarian and approve each request. Requests have no management access until you do.</p>
+        </div>
+      )}
+
       {/* Users Table */}
       <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
         <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
@@ -94,7 +109,7 @@ export const UsersView: React.FC = () => {
                 <th className="py-3 px-3">Designation / department</th>
                 <th className="py-3 px-3">Last Active</th>
                 <th className="py-3 px-3">Status</th>
-                <th className="py-3 px-4 text-right">Change role</th>
+                <th className="py-3 px-4 text-right">Review / change role</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-slate-800 text-gray-800 dark:text-gray-200">
@@ -105,7 +120,7 @@ export const UsersView: React.FC = () => {
                       <div className="w-7 h-7 rounded-full bg-maroon-800 text-gold-300 font-bold flex items-center justify-center text-xs flex-shrink-0">
                         {u.name[0]}
                       </div>
-                      <span className="truncate">{u.name}</span>
+                      <span className="truncate">{u.name || 'Library user'}</span>
                     </div>
                   </td>
                   <td className="py-3 px-3 text-gray-500 dark:text-gray-400">{u.email}</td>
@@ -122,17 +137,47 @@ export const UsersView: React.FC = () => {
                     <StatusBadge status={u.status} size="sm" />
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <select
-                      value={u.role}
-                      onChange={(e) => updateUserRole(u.id, e.target.value as UserRole)}
-                      className="text-xs py-1 px-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-gray-800 dark:text-gray-200"
-                    >
-                      <option value="super_admin">Super Admin</option>
-                      <option value="librarian">Librarian</option>
-                      <option value="assistant_librarian">Assistant Librarian</option>
-                      <option value="teacher">Teacher</option>
-                      <option value="student">Student</option>
-                    </select>
+                    {u.status === 'pending' ? (
+                      isSuperAdmin ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <select
+                            value={approvalRoles[u.id] || 'assistant_librarian'}
+                            onChange={(event) => setApprovalRoles((current) => ({
+                              ...current,
+                              [u.id]: event.target.value as 'librarian' | 'assistant_librarian',
+                            }))}
+                            aria-label={`Role to assign to ${u.name}`}
+                            className="text-xs py-1 px-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-gray-800 dark:text-gray-200"
+                          >
+                            <option value="assistant_librarian">Assistant Librarian</option>
+                            <option value="librarian">Librarian</option>
+                          </select>
+                          <button
+                            onClick={() => handleApproveRequest(u)}
+                            className="rounded-lg bg-emerald-700 px-3 py-1.5 font-bold text-white hover:bg-emerald-800"
+                          >
+                            Approve
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-gray-400">Waiting for main administrator</span>
+                      )
+                    ) : isSuperAdmin && u.role !== 'super_admin' ? (
+                      <select
+                        value={u.role}
+                        onChange={(event) => updateUserRole(u.id, event.target.value as UserRole)}
+                        aria-label={`Change role for ${u.name}`}
+                        className="text-xs py-1 px-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-gray-800 dark:text-gray-200"
+                      >
+                        <option value="librarian">Librarian</option>
+                        <option value="assistant_librarian">Assistant Librarian</option>
+                        <option value="teacher">Teacher</option>
+                        <option value="student">Student</option>
+                        <option value="staff">Staff</option>
+                      </select>
+                    ) : (
+                      <span className="text-[11px] text-gray-400">{isSuperAdmin ? 'Protected account' : 'Super administrator only'}</span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -255,7 +300,6 @@ export const UsersView: React.FC = () => {
                 onChange={(e) => setUserRole(e.target.value as UserRole)}
                 className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white"
               >
-                <option value="super_admin">Super Admin</option>
                 <option value="librarian">Chief Librarian</option>
                 <option value="assistant_librarian">Assistant Librarian</option>
                 <option value="teacher">Teacher</option>

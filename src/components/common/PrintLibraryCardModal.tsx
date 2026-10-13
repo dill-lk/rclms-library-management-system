@@ -64,15 +64,6 @@ export const PrintLibraryCardModal: React.FC = () => {
               <p className="text-[11px] text-neutral-500 mt-0.5 truncate">
                 {member.grade || member.department || 'Rahula College'}
               </p>
-
-              {member.house && (
-                <div className="mt-2">
-                  <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 border border-neutral-300 inline-block">
-                    {member.house} House
-                  </span>
-                </div>
-              )}
-
               <div className="mt-2 text-[9px] text-neutral-500 space-y-0.5 font-mono">
                 <div>ID: {member.memberId}</div>
                 <div>EXP: {member.expiryDate}</div>

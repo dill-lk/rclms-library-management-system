@@ -237,7 +237,6 @@ export async function downloadLibraryCardPdf(member: Member) {
   page.drawText('MEMBER ID', { x: 160, y: 159, size: 7, font: bold, color: COLORS.muted });
   page.drawText(member.memberId, { x: 160, y: 144, size: 10, font: bold, color: COLORS.ink });
   page.drawText(`VALID UNTIL  ${member.expiryDate || '—'}`, { x: 312, y: 144, size: 8, font: regular, color: COLORS.muted });
-  if (member.house) page.drawText(`${member.house} HOUSE`, { x: 160, y: 128, size: 7, font: bold, color: COLORS.maroon });
 
   page.drawRectangle({ x: 28, y: 28, width: 484, height: 72, color: COLORS.white, borderColor: COLORS.line, borderWidth: 0.8 });
   await drawCode128(pdf, page, member.memberId, 76, 47, 388, 42);
