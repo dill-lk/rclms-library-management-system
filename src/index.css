@@ -578,3 +578,77 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .login-card { padding: 1rem !important; }
   .login-card > * + * { margin-top: .75rem !important; }
 }
+
+
+/* Final app-wide contrast guard for dark surfaces and legacy light-theme utility colors. */
+.app-shell a,
+.app-shell a:visited { color: inherit; }
+.app-shell [class*="text-gray-950"],
+.app-shell [class*="text-gray-900"],
+.app-shell [class*="text-gray-800"],
+.app-shell [class*="text-neutral-950"],
+.app-shell [class*="text-neutral-900"],
+.app-shell [class*="text-neutral-800"],
+.app-shell [class*="text-slate-950"],
+.app-shell [class*="text-slate-900"],
+.app-shell [class*="text-slate-800"],
+.app-shell [class*="text-zinc-950"],
+.app-shell [class*="text-zinc-900"],
+.app-shell [class*="text-zinc-800"],
+.app-shell [class*="text-stone-950"],
+.app-shell [class*="text-stone-900"],
+.app-shell [class*="text-stone-800"] { color: var(--text-main) !important; }
+.app-shell [class*="text-gray-700"],
+.app-shell [class*="text-gray-600"],
+.app-shell [class*="text-gray-500"],
+.app-shell [class*="text-gray-400"],
+.app-shell [class*="text-neutral-700"],
+.app-shell [class*="text-neutral-600"],
+.app-shell [class*="text-neutral-500"],
+.app-shell [class*="text-neutral-400"],
+.app-shell [class*="text-slate-700"],
+.app-shell [class*="text-slate-600"],
+.app-shell [class*="text-slate-500"],
+.app-shell [class*="text-slate-400"],
+.app-shell [class*="text-zinc-700"],
+.app-shell [class*="text-zinc-600"],
+.app-shell [class*="text-zinc-500"],
+.app-shell [class*="text-stone-700"],
+.app-shell [class*="text-stone-600"],
+.app-shell [class*="text-stone-500"] { color: var(--text-muted) !important; }
+.app-shell [class*="text-blue-"],
+.app-shell [class*="text-indigo-"],
+.app-shell [class*="text-cyan-"],
+.app-shell [class*="text-sky-"],
+.app-shell [class*="text-teal-"],
+.app-shell [class*="text-violet-"],
+.app-shell [class*="text-purple-"] { color: var(--text-main) !important; }
+.app-shell [class*="bg-blue-"],
+.app-shell [class*="bg-indigo-"],
+.app-shell [class*="bg-cyan-"],
+.app-shell [class*="bg-sky-"],
+.app-shell [class*="bg-teal-"],
+.app-shell [class*="bg-violet-"],
+.app-shell [class*="bg-purple-"] { background-color: rgba(168,162,158,.10) !important; }
+.app-shell [class*="border-blue-"],
+.app-shell [class*="border-indigo-"],
+.app-shell [class*="border-cyan-"],
+.app-shell [class*="border-sky-"],
+.app-shell [class*="border-teal-"],
+.app-shell [class*="border-violet-"],
+.app-shell [class*="border-purple-"] { border-color: var(--border-color) !important; }
+.app-shell [class*="ring-blue-"],
+.app-shell [class*="ring-indigo-"],
+.app-shell [class*="ring-cyan-"],
+.app-shell [class*="ring-sky-"],
+.app-shell [class*="ring-teal-"],
+.app-shell [class*="ring-violet-"],
+.app-shell [class*="ring-purple-"] { --tw-ring-color: rgba(231,229,228,.32) !important; }
+.app-shell svg [fill="#475569"],
+.app-shell svg [fill="#64748b"] { fill: var(--text-muted) !important; }
+.app-shell .text-black { color: var(--text-main) !important; }
+.app-shell .bg-white.text-black { background-color: var(--action-light) !important; color: var(--action-ink) !important; }
+.dashboard-issue-books,
+.dashboard-issue-books:visited { background: var(--action-light) !important; border: 1px solid var(--action-light) !important; color: var(--action-ink) !important; }
+.dashboard-issue-books:hover { background: var(--pure-white) !important; border-color: var(--pure-white) !important; color: var(--action-ink) !important; }
+.dashboard-issue-books svg { color: var(--action-ink) !important; }

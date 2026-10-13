@@ -438,7 +438,7 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
                             >
                               {book.title}
                             </button>
-                            <p className="text-[11px] text-neutral-500">
+                            <p className="text-[11px] text-library-muted">
                               {book.author} • {book.language} ({book.publicationYear})
                             </p>
                           </div>
@@ -578,7 +578,7 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
                   {/* Metadata */}
                   <div className="mt-3 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-neutral-800 truncate">
+                      <span className="font-semibold text-library-main truncate">
                         {book.author}
                       </span>
                       <span className="text-[10px] text-neutral-400 font-mono">{book.publicationYear}</span>

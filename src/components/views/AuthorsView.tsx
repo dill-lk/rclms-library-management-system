@@ -189,7 +189,7 @@ export const AuthorsView: React.FC = () => {
                         <Users className="w-5 h-5" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-1">
+                        <h3 className="font-bold text-sm text-library-main line-clamp-1">
                           {author.name}
                         </h3>
                         {author.sinhalaName && (
@@ -205,7 +205,7 @@ export const AuthorsView: React.FC = () => {
                     </span>
                   </div>
 
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-3 line-clamp-2">
+                  <p className="text-xs text-library-muted mt-3 line-clamp-2">
                     {author.biography || 'Author in Rahula College library collection.'}
                   </p>
 
