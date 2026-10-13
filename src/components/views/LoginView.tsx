@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   HelpCircle,
   KeyRound,
+  BookOpen,
 } from 'lucide-react';
 
 export const LoginView: React.FC = () => {
@@ -171,22 +172,12 @@ export const LoginView: React.FC = () => {
             <p className="mt-10 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-700"><span className="h-1.5 w-1.5 rounded-full bg-cyan-500" />Library operations</p>
             <h2 className="mt-4 max-w-lg text-4xl font-bold leading-tight tracking-tight xl:text-[2.7rem]">Every title, copy, and loan—easy to find.</h2>
             <p className="mt-4 max-w-md text-sm leading-6 text-slate-600">A calm, connected workspace for keeping the catalogue accurate and the circulation desk moving.</p>
-
-            <div className="mt-9 rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur-sm">
-              <div className="flex items-center justify-between gap-3">
-                <div><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-indigo-700">One clear view</p><p className="mt-1 text-sm font-semibold text-slate-900">From shelf to circulation</p></div>
-                <span className="rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-[10px] font-semibold text-cyan-800">Connected workspace</span>
-              </div>
-              <div className="mt-5 flex h-16 items-end gap-2" aria-hidden="true">
-                <span className="h-7 flex-1 rounded-t-md bg-indigo-300" /><span className="h-12 flex-1 rounded-t-md bg-cyan-300" /><span className="h-9 flex-1 rounded-t-md bg-indigo-400" /><span className="h-14 flex-1 rounded-t-md bg-sky-300" /><span className="h-11 flex-1 rounded-t-md bg-cyan-400" /><span className="h-16 flex-1 rounded-t-md bg-indigo-600" />
-              </div>
-              <div className="mt-3 flex items-center justify-between text-[10px] font-medium text-slate-500"><span>Catalogue</span><span>Loans</span><span>Returns</span><span>Members</span></div>
+            <div className="relative mt-10 flex h-48 max-w-md items-center justify-center" aria-hidden="true">
+              <div className="absolute left-10 top-7 h-32 w-36 -rotate-6 rounded-2xl border border-indigo-100 bg-white/75 shadow-subtle" />
+              <div className="absolute right-10 top-3 h-36 w-40 rotate-6 rounded-2xl border border-cyan-100 bg-cyan-50/80 shadow-card" />
+              <div className="relative flex h-32 w-32 items-center justify-center rounded-3xl bg-indigo-700 text-white shadow-elevated ring-8 ring-white/70"><BookOpen className="h-16 w-16" strokeWidth={1.4} /></div>
+              <span className="absolute bottom-5 right-16 h-9 w-9 rounded-full border-4 border-white bg-cyan-400 shadow-sm" />
             </div>
-          </div>
-          <div className="relative grid grid-cols-3 gap-3 text-xs text-slate-500">
-            <div className="border-t border-indigo-200 pt-3"><strong className="block text-slate-900">Catalogue</strong>Titles and copies</div>
-            <div className="border-t border-cyan-200 pt-3"><strong className="block text-slate-900">Circulation</strong>Loans and returns</div>
-            <div className="border-t border-slate-200 pt-3"><strong className="block text-slate-900">People</strong>Members and staff</div>
           </div>
         </div>
 
