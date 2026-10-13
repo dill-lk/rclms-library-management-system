@@ -10,10 +10,15 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
+  ArrowLeft,
   HelpCircle,
 } from 'lucide-react';
 
-export const LoginView: React.FC = () => {
+interface LoginViewProps {
+  onBackToPortals?: () => void;
+}
+
+export const LoginView: React.FC<LoginViewProps> = ({ onBackToPortals }) => {
   const {
     loginWithCredentials,
     registerUser,
@@ -63,7 +68,7 @@ export const LoginView: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const res = await loginWithCredentials(loginEmail, loginPassword);
+      const res = await loginWithCredentials(loginEmail, loginPassword, 'staff');
       if (!res.success) {
         setLoginError(res.message);
       }
@@ -151,7 +156,13 @@ export const LoginView: React.FC = () => {
   return (
     <div className="login-page min-h-screen overflow-x-hidden bg-library-bg text-library-main flex flex-col p-4 sm:p-6 font-body">
       <div className="login-topbar w-full max-w-5xl mx-auto py-2 flex items-center justify-between">
-        <span className="text-xs font-semibold tracking-wide text-library-main">Rahula College</span>
+        {onBackToPortals ? (
+          <button type="button" onClick={onBackToPortals} className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-wide text-library-main hover:text-indigo-700">
+            <ArrowLeft className="h-3.5 w-3.5" /> Select portal
+          </button>
+        ) : (
+          <span className="text-xs font-semibold tracking-wide text-library-main">Rahula College</span>
+        )}
         <span className="text-xs font-semibold tracking-wide text-neutral-500 hidden sm:block">Matara · Sri Lanka</span>
       </div>
 
@@ -187,7 +198,7 @@ export const LoginView: React.FC = () => {
 
         {/* Auth Mode Tabs: Sign In / Create Account */}
         {authMode !== 'setup_wizard' && authMode !== 'forgot_password' && (
-          <div className="grid grid-cols-2 p-1 bg-neutral-100 rounded-xl border border-neutral-200 text-xs font-semibold">
+          <div className="grid grid-cols-1 p-1 bg-neutral-100 rounded-xl border border-neutral-200 text-xs font-semibold">
             <button
               onClick={() => {
                 setAuthMode('login');
@@ -200,19 +211,6 @@ export const LoginView: React.FC = () => {
               }`}
             >
               Sign In
-            </button>
-            <button
-              onClick={() => {
-                setAuthMode('signup');
-                setSignupError('');
-              }}
-              className={`py-2 rounded-xl transition ${
-                authMode === 'signup'
-                  ? 'bg-library-action text-library-bg shadow-xs font-bold border border-library-border'
-                  : 'text-library-muted hover:text-library-main'
-              }`}
-            >
-              Register
             </button>
           </div>
         )}

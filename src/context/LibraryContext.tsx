@@ -76,7 +76,7 @@ interface LibraryContextType {
   updateUserRole: (userId: string, role: UserAccount['role']) => Promise<{ success: boolean; message: string }>;
   isLoggedIn: boolean;
   login: (user: UserAccount) => void;
-  loginWithCredentials: (email: string, password: string) => Promise<{ success: boolean; message: string; user?: UserAccount }>;
+  loginWithCredentials: (email: string, password: string, audience?: 'borrower' | 'staff') => Promise<{ success: boolean; message: string; user?: UserAccount }>;
   registerUser: (userData: { name: string; email: string; password: string; role: UserRole; designation?: string; admissionNo?: string; grade?: string; phone?: string }) => Promise<{ success: boolean; message: string; user?: UserAccount }>;
   resetPassword: (email: string) => Promise<{ success: boolean; message: string }>;
   completeSetupWizard: (setupData: { adminName: string; adminEmail: string; adminPass: string; libraryName: string; campusAddress: string; phone: string; seedCatalog: boolean }) => void;
@@ -566,7 +566,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     });
   };
 
-  const loginWithCredentials = async (email: string, pass: string): Promise<{ success: boolean; message: string; user?: UserAccount }> => {
+  const loginWithCredentials = async (email: string, pass: string, audience?: 'borrower' | 'staff'): Promise<{ success: boolean; message: string; user?: UserAccount }> => {
     const cleanEmail = email.trim().toLowerCase();
     const supabase = getSupabase();
 
@@ -603,6 +603,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
                 admission_no: authData.user.user_metadata?.admission_no || null,
                 grade: authData.user.user_metadata?.grade || null,
                 phone: authData.user.user_metadata?.phone || null,
+                department: authData.user.user_metadata?.department || null,
                 status: 'active',
               })
               .select('*')
@@ -620,6 +621,14 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
           const allowedRoles: UserRole[] = ['super_admin', 'librarian', 'assistant_librarian', 'teacher', 'student', 'staff'];
           const fallbackRole: UserRole = metadataRole === 'teacher' ? 'teacher' : 'student';
           const role = allowedRoles.includes(profile?.role as UserRole) ? profile!.role as UserRole : fallbackRole;
+          if (audience === 'borrower' && role !== 'student' && role !== 'teacher') {
+            await supabase.auth.signOut({ scope: 'local' });
+            return { success: false, message: 'This is the student and teacher portal. Use Staff & Admin access for this account.' };
+          }
+          if (audience === 'staff' && (role === 'student' || role === 'teacher')) {
+            await supabase.auth.signOut({ scope: 'local' });
+            return { success: false, message: 'This is the Staff & Admin portal. Use Student & Teacher access for this account.' };
+          }
           const authedUser: UserAccount = {
             id: authData.user.id,
             name: profile?.full_name || authData.user.user_metadata?.full_name || cleanEmail.split('@')[0],
@@ -701,100 +710,34 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
       return { success: false, message: 'Staff and administrator accounts must be created by an authorized administrator.' };
     }
     const supabase = getSupabase();
+    if (!supabase) return { success: false, message: 'Registration is unavailable until Supabase is configured.' };
 
-    if (supabase) {
-      try {
-        const { data: authData, error: authError } = await supabase.auth.signUp({
+    try {
+      const { data, error } = await supabase.functions.invoke('register-borrower', {
+        body: {
+          name: userData.name.trim(),
           email: cleanEmail,
           password: userData.password,
-          options: {
-            data: {
-              full_name: userData.name,
-              role: userData.role,
-              admission_no: userData.admissionNo,
-              grade: userData.grade,
-              phone: userData.phone,
-            },
-          },
-        });
+          role: userData.role,
+          designation: userData.designation,
+          admissionNo: userData.admissionNo,
+          grade: userData.grade,
+          phone: userData.phone,
+        },
+      });
 
-        if (authError) {
-          return { success: false, message: authError.message };
-        }
+      if (error) return { success: false, message: error.message || 'Reader registration is unavailable. Try again later.' };
+      if (data?.success !== true) return { success: false, message: data?.message || 'Reader registration could not be completed.' };
 
-        if (authData.user && !authData.session) {
-          return { success: true, message: 'Registration received. Check your email to confirm the account before signing in.' };
-        }
-
-        if (authData.user) {
-          // Insert profile record
-          const { error: profileSaveError } = await supabase.from('profiles').upsert({
-            id: authData.user.id,
-            email: cleanEmail,
-            full_name: userData.name,
-            role: userData.role,
-            admission_no: userData.admissionNo,
-            grade: userData.grade,
-            phone: userData.phone,
-            department: userData.designation,
-          });
-          if (profileSaveError) {
-            return { success: false, message: `The Auth account was created, but its library profile could not be saved: ${profileSaveError.message}` };
-          }
-
-          // Insert member record
-          if (userData.role === 'student' || userData.role === 'teacher') {
-            const { error: memberSaveError } = await supabase.from('members').upsert({
-              user_id: authData.user.id,
-              member_id: `RC-${userData.role.toUpperCase().slice(0, 3)}-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-              admission_no: userData.admissionNo || `${Math.floor(20000 + Math.random() * 9000)}`,
-              name: userData.name,
-              type: userData.role === 'teacher' ? 'teacher' : userData.role === 'student' ? 'student' : 'staff',
-              grade: userData.grade,
-              department: userData.designation,
-              email: cleanEmail,
-              phone: userData.phone,
-              max_borrow_limit: userData.role === 'teacher' ? 7 : Math.max(1, Number(settings.maxStudentBooks) || 1),
-            });
-            if (memberSaveError) {
-              return { success: false, message: `Your library profile was saved, but the borrower record could not be created: ${memberSaveError.message}` };
-            }
-          }
-
-          const deviceSession = await registerCurrentDeviceSession();
-          if (deviceSession.error || deviceSession.status !== 'active') {
-            await supabase.auth.signOut({ scope: 'local' });
-            return {
-              success: false,
-              message: deviceSession.error || `This sign-in session is ${deviceSession.status}. Contact an administrator if access should be restored.`,
-            };
-          }
-
-          const newUser: UserAccount = {
-            id: authData.user.id,
-            name: userData.name,
-            email: cleanEmail,
-            role: userData.role,
-            designation: userData.designation || (userData.role === 'student' ? 'Student' : 'Faculty Member'),
-            admissionNo: userData.admissionNo,
-            grade: userData.grade,
-            phone: userData.phone,
-            lastLogin: 'Just now',
-            status: 'active',
-            permissions: permissionsForRole(userData.role),
-          };
-
-          setCurrentUser(newUser);
-          setIsLoggedIn(true);
-          await refreshAllData();
-          return { success: true, message: 'Account registered with Supabase Cloud Auth.', user: newUser };
-        }
-      } catch (err: any) {
-        console.warn('Supabase signup error:', err);
+      const signInResult = await loginWithCredentials(cleanEmail, userData.password, 'borrower');
+      if (!signInResult.success) {
+        return { success: false, message: `Your reader account was created, but sign-in could not be completed: ${signInResult.message}` };
       }
+      return { success: true, message: 'Reader account created and signed in.', user: signInResult.user };
+    } catch (err: any) {
+      console.warn('Borrower registration failed:', err);
+      return { success: false, message: err?.message || 'Reader registration is unavailable. Try again later.' };
     }
-
-    return { success: false, message: 'Registration is unavailable until Supabase is configured.' };
   };
 
   const resetPassword = async (email: string): Promise<{ success: boolean; message: string }> => {

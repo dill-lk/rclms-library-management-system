@@ -10,7 +10,8 @@ const CommandPalette = lazy(() => import('./components/common/CommandPalette').t
 const PrintReceiptModal = lazy(() => import('./components/common/PrintReceiptModal').then(({ PrintReceiptModal }) => ({ default: PrintReceiptModal })));
 const PrintLibraryCardModal = lazy(() => import('./components/common/PrintLibraryCardModal').then(({ PrintLibraryCardModal }) => ({ default: PrintLibraryCardModal })));
 const AddEditBookModal = lazy(() => import('./components/views/AddEditBookModal').then(({ AddEditBookModal }) => ({ default: AddEditBookModal })));
-const LoginView = lazy(() => import('./components/views/LoginView').then(({ LoginView }) => ({ default: LoginView })));
+const AuthGateway = lazy(() => import('./components/views/AuthGateway').then(({ AuthGateway }) => ({ default: AuthGateway })));
+const BorrowerPortal = lazy(() => import('./components/views/BorrowerPortal').then(({ BorrowerPortal }) => ({ default: BorrowerPortal })));
 const DashboardView = lazy(() => import('./components/views/DashboardView').then(({ DashboardView }) => ({ default: DashboardView })));
 const BooksView = lazy(() => import('./components/views/BooksView').then(({ BooksView }) => ({ default: BooksView })));
 const BookDetailsView = lazy(() => import('./components/views/BookDetailsView').then(({ BookDetailsView }) => ({ default: BookDetailsView })));
@@ -33,7 +34,7 @@ const ProfileView = lazy(() => import('./components/views/ProfileView').then(({ 
 const RecommendationsView = lazy(() => import('./components/views/RecommendationsView').then(({ RecommendationsView }) => ({ default: RecommendationsView })));
 
 export const AppContent: React.FC = () => {
-  const { isLoggedIn, activeTab, setActiveTab, printData, isCommandPaletteOpen, logout, addToast } = useLibrary();
+  const { isLoggedIn, currentUser, activeTab, setActiveTab, printData, isCommandPaletteOpen, logout, addToast } = useLibrary();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -82,7 +83,15 @@ export const AppContent: React.FC = () => {
   if (!isLoggedIn) {
     return (
       <Suspense fallback={<div role="status" className="p-8 text-sm text-neutral-600">Loading sign-in…</div>}>
-        <LoginView />
+        <AuthGateway />
+      </Suspense>
+    );
+  }
+
+  if (currentUser.role === 'student' || currentUser.role === 'teacher') {
+    return (
+      <Suspense fallback={<div role="status" className="p-8 text-sm text-neutral-600">Loading reader portal…</div>}>
+        <BorrowerPortal />
       </Suspense>
     );
   }
