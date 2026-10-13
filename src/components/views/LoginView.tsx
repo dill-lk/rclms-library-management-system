@@ -153,39 +153,40 @@ export const LoginView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-neutral-50 text-neutral-950 flex flex-col p-4 sm:p-6 font-sans">
-      <div className="w-full max-w-5xl mx-auto py-2">
-        <span className="text-xs font-semibold tracking-wide text-neutral-700">Rahula College Library</span>
+    <div className="login-page min-h-screen overflow-x-hidden bg-library-bg text-library-main flex flex-col p-4 sm:p-6 font-body">
+      <div className="login-topbar w-full max-w-5xl mx-auto py-2 flex items-center justify-between">
+        <CollegeCrest size="sm" lightMode />
+        <span className="text-xs font-semibold tracking-wide text-neutral-500 hidden sm:block">Matara · Sri Lanka</span>
       </div>
 
       {/* Main sign-in workspace */}
-      <div className="w-full max-w-5xl mx-auto flex-1 py-8 lg:py-12 grid min-w-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] gap-8 items-start">
-        <div className="relative isolate hidden min-h-[34rem] h-full flex-col justify-between overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-[#eef2ff] via-white to-[#ecfeff] p-9 text-slate-900 shadow-card lg:flex xl:p-10">
+      <div className="login-layout w-full max-w-5xl mx-auto flex-1 py-8 lg:py-12 grid min-w-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] gap-8 items-start">
+        <div className="login-hero relative isolate hidden min-h-[34rem] h-full flex-col justify-between overflow-hidden rounded-3xl border border-library-border bg-library-surface p-9 text-library-main shadow-card lg:flex xl:p-10">
           <div aria-hidden="true" className="absolute -right-24 -top-24 h-80 w-80 rounded-full border-[34px] border-indigo-300/30" />
           <div aria-hidden="true" className="absolute -bottom-28 -left-20 h-72 w-72 rounded-full border-[28px] border-cyan-300/25" />
-          <div aria-hidden="true" className="absolute inset-0 opacity-[0.45] [background-image:radial-gradient(#6366f1_0.7px,transparent_0.7px)] [background-size:20px_20px]" />
+          <div aria-hidden="true" className="absolute inset-0 opacity-[0.45] [background-image:radial-gradient(#E7E5E4_0.7px,transparent_0.7px)] [background-size:20px_20px]" />
           <div className="relative">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-indigo-200 bg-white text-indigo-700 shadow-sm"><span className="font-heading text-lg font-bold">R</span></div>
               <div><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-indigo-700">Rahula College</p><p className="mt-0.5 text-xs text-slate-500">Matara · Library & resource centre</p></div>
             </div>
-            <p className="mt-10 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-700"><span className="h-1.5 w-1.5 rounded-full bg-cyan-500" />Library operations</p>
+            <p className="mt-10 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-700"><span className="h-1.5 w-1.5 rounded-full bg-library-action" />Library operations</p>
             <h2 className="mt-4 max-w-lg text-4xl font-bold leading-tight tracking-tight xl:text-[2.7rem]">Every title, copy, and loan—easy to find.</h2>
             <p className="mt-4 max-w-md text-sm leading-6 text-slate-600">A calm, connected workspace for keeping the catalogue accurate and the circulation desk moving.</p>
             <div className="relative mt-10 flex h-48 max-w-md items-center justify-center" aria-hidden="true">
               <div className="absolute left-10 top-7 h-32 w-36 -rotate-6 rounded-2xl border border-indigo-100 bg-white/75 shadow-subtle" />
               <div className="absolute right-10 top-3 h-36 w-40 rotate-6 rounded-2xl border border-cyan-100 bg-cyan-50/80 shadow-card" />
               <div className="relative flex h-32 w-32 items-center justify-center rounded-3xl bg-indigo-700 text-white shadow-elevated ring-8 ring-white/70"><BookOpen className="h-16 w-16" strokeWidth={1.4} /></div>
-              <span className="absolute bottom-5 right-16 h-9 w-9 rounded-full border-4 border-white bg-cyan-400 shadow-sm" />
+              <span className="absolute bottom-5 right-16 h-9 w-9 rounded-full border-4 border-white bg-library-action shadow-sm" />
             </div>
           </div>
         </div>
 
-      <div className="w-full min-w-0 max-w-md lg:max-w-none mx-auto bg-white border border-slate-200 rounded-3xl shadow-card p-6 sm:p-8 space-y-6 self-start">
+      <div className="login-card w-full min-w-0 max-w-md lg:max-w-none mx-auto bg-library-surface border border-library-border rounded-3xl shadow-card p-6 sm:p-8 space-y-6 self-start">
         {/* Header Branding */}
-        <div className="text-center space-y-3">
+        <div className="login-card-header text-center space-y-3">
           <div className="w-20 h-20 mx-auto rounded-2xl bg-neutral-50 border border-neutral-200 flex items-center justify-center p-2">
-            <CollegeCrest size="lg" />
+            <CollegeCrest size="lg" showText={false} />
           </div>
           <div className="space-y-1">
             <h1 className="text-xl font-bold tracking-tight text-neutral-950">
@@ -207,8 +208,8 @@ export const LoginView: React.FC = () => {
               }}
               className={`py-2 rounded-xl transition ${
                 authMode === 'login'
-                  ? 'bg-white text-neutral-950 shadow-xs font-bold border border-neutral-200'
-                  : 'text-neutral-500 hover:text-neutral-950'
+                  ? 'bg-library-action text-library-bg shadow-xs font-bold border border-library-border'
+                  : 'text-library-muted hover:text-library-main'
               }`}
             >
               Sign In
@@ -220,8 +221,8 @@ export const LoginView: React.FC = () => {
               }}
               className={`py-2 rounded-xl transition ${
                 authMode === 'signup'
-                  ? 'bg-white text-neutral-950 shadow-xs font-bold border border-neutral-200'
-                  : 'text-neutral-500 hover:text-neutral-950'
+                  ? 'bg-library-action text-library-bg shadow-xs font-bold border border-library-border'
+                  : 'text-library-muted hover:text-library-main'
               }`}
             >
               Register
@@ -585,7 +586,7 @@ export const LoginView: React.FC = () => {
       </div>
 
       {/* Institutional Footer */}
-      <div className="text-center py-4 text-xs text-neutral-500 space-y-1">
+      <div className="login-footer text-center py-4 text-xs text-neutral-500 space-y-1">
         <p>Rahula College Library Management System • Matara, Sri Lanka</p>
       </div>
 

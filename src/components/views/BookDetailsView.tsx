@@ -106,7 +106,7 @@ export const BookDetailsView: React.FC<BookDetailsViewProps> = ({ onBack, onEdit
       <div className="bg-white dark:bg-[#14171F] border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-xs grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left: Book Cover Plate & Quick Actions (4 cols) */}
         <div className="lg:col-span-4 flex flex-col items-center">
-          <div className="w-full max-w-[240px] aspect-[3/4] bg-gradient-to-br from-[#800020] via-[#5A0015] to-[#2D000A] rounded-2xl shadow-xl border border-amber-500/30 p-6 flex flex-col justify-between text-white relative overflow-hidden group">
+          <div className="w-full max-w-[240px] aspect-[3/4] bg-gradient-to-br from-library-surface via-library-border to-library-bg rounded-2xl shadow-xl border border-library-border p-6 flex flex-col justify-between text-white relative overflow-hidden group">
             <div className="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 bg-amber-400/10 rounded-full blur-xl" />
             <div>
               <div className="flex items-center justify-between">

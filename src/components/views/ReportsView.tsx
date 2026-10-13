@@ -10,8 +10,8 @@ import {
 } from 'recharts';
 import { getCatalogueMetrics } from '../../utils/catalogueMetrics';
 
-const CHART_COLORS = ['#4f46e5', '#06b6d4', '#10b981', '#6366f1', '#f97316', '#8b5cf6', '#14b8a6'];
-const panelClass = 'rounded-2xl border border-slate-200 bg-white p-5 shadow-subtle dark:border-slate-800 dark:bg-[#141f2e]';
+const CHART_COLORS = ['#E7E5E4', '#A8A29E', '#FFFFFF', '#2B2922', '#E7E5E4', '#A8A29E', '#FFFFFF'];
+const panelClass = 'rounded-2xl border border-library-border bg-library-surface p-5 shadow-subtle';
 const compactNumber = new Intl.NumberFormat('en-LK');
 
 function parseDay(value?: string) {
@@ -80,8 +80,7 @@ export const ReportsView: React.FC = () => {
     const headers = 'Metric,Value,Status,Generated\n';
     const rows = [
       `Active catalogue copies,${totalVolume},Current,${new Date().toLocaleDateString()}`,
-      `Total physical-copy records,${catalogue.totalPhysicalCopies},Includes archived titles,${new Date().toLocaleDateString()}`,
-      `Copies on archived titles,${catalogue.archivedPhysicalCopies},Archived,${new Date().toLocaleDateString()}`,
+      `Active catalogue titles,${catalogue.activeTitles},Current,${new Date().toLocaleDateString()}`,
       `Registered members,${members.length},Current,${new Date().toLocaleDateString()}`,
       `Active loans,${activeLoansCount},Issued,${new Date().toLocaleDateString()}`,
       `Overdue loans,${overdueCount},Overdue,${new Date().toLocaleDateString()}`,
@@ -170,9 +169,13 @@ export const ReportsView: React.FC = () => {
         </article>
         <article className={panelClass}>
           <div className="mb-4"><h2 className="text-base font-bold text-neutral-950 dark:text-white">Most borrowed titles</h2><p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Based on saved lifetime checkout counts</p></div>
-          {popularBooks.length ? <div className="h-80" role="img" aria-label="Bar chart of most borrowed book titles"><ResponsiveContainer width="100%" height="100%"><BarChart data={popularBooks} margin={{ top: 4, right: 10, left: -12, bottom: 42 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" /><XAxis dataKey="title" interval={0} angle={-24} textAnchor="end" height={70} tickLine={false} axisLine={false} tick={{ fill: '#475569', fontSize: 10 }} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} /><Tooltip /><Bar dataKey="checkouts" name="Checkouts" fill="#06b6d4" radius={[5, 5, 0, 0]} /></BarChart></ResponsiveContainer></div> : <div className="flex h-80 flex-col items-center justify-center text-center"><BookOpen className="h-9 w-9 text-neutral-300" /><p className="mt-3 text-sm font-semibold text-neutral-700 dark:text-neutral-200">Not enough checkout history yet</p><p className="mt-1 max-w-xs text-xs text-neutral-500">Once loans are completed, the most borrowed titles will be ranked here.</p></div>}
+          {popularBooks.length ? <div className="h-80" role="img" aria-label="Bar chart of most borrowed book titles"><ResponsiveContainer width="100%" height="100%"><BarChart data={popularBooks} margin={{ top: 4, right: 10, left: -12, bottom: 42 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#2B2922" /><XAxis dataKey="title" interval={0} angle={-24} textAnchor="end" height={70} tickLine={false} axisLine={false} tick={{ fill: '#A8A29E', fontSize: 10 }} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#A8A29E', fontSize: 11 }} /><Tooltip /><Bar dataKey="checkouts" name="Checkouts" fill="#A8A29E" radius={[5, 5, 0, 0]} /></BarChart></ResponsiveContainer></div> : <div className="flex h-80 flex-col items-center justify-center text-center"><BookOpen className="h-9 w-9 text-neutral-300" /><p className="mt-3 text-sm font-semibold text-neutral-700 dark:text-neutral-200">Not enough checkout history yet</p><p className="mt-1 max-w-xs text-xs text-neutral-500">Once loans are completed, the most borrowed titles will be ranked here.</p></div>}
         </article>
-        <div className="grid gap-3 sm:grid-cols-3 xl:col-span-2"><article className={panelClass}><p className="text-xs font-semibold text-slate-500">Active titles</p><p className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">{compactNumber.format(catalogue.activeTitles)}</p><p className="mt-1 text-xs text-slate-500">{compactNumber.format(catalogue.archivedTitles)} archived titles excluded</p></article><article className={panelClass}><p className="text-xs font-semibold text-slate-500">Active copies</p><p className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">{compactNumber.format(totalVolume)}</p><p className="mt-1 text-xs text-slate-500">Assigned to active titles</p></article><article className={panelClass}><p className="text-xs font-semibold text-slate-500">All physical-copy records</p><p className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">{compactNumber.format(catalogue.totalPhysicalCopies)}</p><p className="mt-1 text-xs text-slate-500">{compactNumber.format(catalogue.archivedPhysicalCopies)} attached to archived titles</p></article></div>
+        <div className="grid gap-3 sm:grid-cols-3 xl:col-span-2">
+          <article className={panelClass}><p className="text-xs font-semibold text-library-muted">Active titles</p><p className="mt-2 text-3xl font-bold text-library-main">{compactNumber.format(catalogue.activeTitles)}</p><p className="mt-1 text-xs text-library-muted">Titles in the active catalogue</p></article>
+          <article className={panelClass}><p className="text-xs font-semibold text-library-muted">Active copies</p><p className="mt-2 text-3xl font-bold text-library-main">{compactNumber.format(totalVolume)}</p><p className="mt-1 text-xs text-library-muted">Assigned to active titles</p></article>
+          <article className={panelClass}><p className="text-xs font-semibold text-library-muted">Available copies</p><p className="mt-2 text-3xl font-bold text-library-main">{compactNumber.format(availableCopies)}</p><p className="mt-1 text-xs text-library-muted">Ready for circulation</p></article>
+        </div>
       </section>}
 
       {reportType === 'fines' && <section className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">

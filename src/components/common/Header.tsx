@@ -107,7 +107,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const { title, desc } = getPageTitle(activeTab);
 
   return (
-    <header className="sticky top-0 z-30 bg-white/90 dark:bg-[#141f2e]/90 backdrop-blur-xl border-b border-neutral-200/80 dark:border-neutral-800 transition-colors duration-200">
+    <header className="app-header sticky top-0 z-30 bg-library-surface/95 backdrop-blur-xl border-b border-library-border transition-colors duration-200">
       <div className="px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Left: Mobile Toggle & Page Title */}
         <div className="flex items-center gap-3 min-w-0">

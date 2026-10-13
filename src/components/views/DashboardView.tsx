@@ -13,9 +13,11 @@ import {
 } from 'recharts';
 
 const chartTooltipStyle = {
+  backgroundColor: '#141311',
   borderRadius: 12,
-  border: '1px solid #dce4ee',
-  boxShadow: '0 8px 24px rgba(15,23,42,0.12)',
+  border: '1px solid #2B2922',
+  color: '#E7E5E4',
+  boxShadow: '0 8px 24px rgba(0,0,0,.28)',
   fontSize: 12,
 };
 
@@ -55,8 +57,8 @@ export const DashboardView: React.FC = () => {
   }, [circulation]);
 
   const availability = [
-    { name: 'Available', value: Math.min(activeAvailable, catalogue.activePhysicalCopies), color: '#4f46e5' },
-    { name: 'On loan / unavailable', value: activeUnavailable, color: '#06b6d4' },
+    { name: 'Available', value: Math.min(activeAvailable, catalogue.activePhysicalCopies), color: '#E7E5E4' },
+    { name: 'On loan / unavailable', value: activeUnavailable, color: '#2B2922' },
   ].filter((item) => item.value > 0);
 
   const handleRefresh = async () => {
@@ -70,7 +72,7 @@ export const DashboardView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-gradient-to-r from-white via-indigo-50/60 to-cyan-50/70 p-5 shadow-subtle dark:border-slate-800 dark:from-slate-900 dark:via-indigo-950/30 dark:to-cyan-950/20 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <header className="dashboard-hero flex flex-col gap-4 rounded-3xl border border-library-border bg-library-surface p-5 shadow-subtle sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div>
           <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-indigo-700 dark:text-indigo-300"><span className="h-1.5 w-1.5 rounded-full bg-cyan-500" />Library desk · Today</p>
           <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 dark:text-white">{greeting}, {currentUser.name?.split(' ')[0] || 'there'}</h1>
@@ -105,8 +107,8 @@ export const DashboardView: React.FC = () => {
       )}
 
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <StatCard label="Active titles" value={catalogue.activeTitles} subtitle={`${catalogue.archivedTitles} archived records excluded`} icon={BookOpen} color="maroon" onClick={() => setActiveTab('books')} />
-        <StatCard label="Physical copies" value={catalogue.totalPhysicalCopies} subtitle={`${catalogue.activePhysicalCopies} active · ${catalogue.archivedPhysicalCopies} on archived titles`} icon={Boxes} color="gold" onClick={() => setActiveTab('books')} />
+        <StatCard label="Active titles" value={catalogue.activeTitles} subtitle="Titles in the current catalogue" icon={BookOpen} color="maroon" onClick={() => setActiveTab('books')} />
+        <StatCard label="Physical copies" value={catalogue.activePhysicalCopies} subtitle="Copies linked to active titles" icon={Boxes} color="gold" onClick={() => setActiveTab('books')} />
         <StatCard label="Open loans" value={activeLoans.length} subtitle="Currently checked out" icon={BookMarked} color="blue" />
         <StatCard label="Overdue" value={overdueLoans.length} subtitle={overdueLoans.length ? 'Needs follow-up' : 'Nothing overdue'} icon={AlertTriangle} color={overdueLoans.length ? 'rose' : 'emerald'} />
       </section>
@@ -123,21 +125,21 @@ export const DashboardView: React.FC = () => {
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-bold text-slate-950 dark:text-white">Circulation activity</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Loans issued and returns received · last six months</p></div><span className="rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">{circulation.length} records</span></div>
           <div className="h-72" role="img" aria-label="Area chart showing monthly loans issued and returns">
             <ResponsiveContainer width="100%" height="100%"><AreaChart data={monthlyCirculation} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
-              <defs><linearGradient id="issuedGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#4f46e5" stopOpacity={0.24} /><stop offset="95%" stopColor="#4f46e5" stopOpacity={0.01} /></linearGradient><linearGradient id="returnedGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#06b6d4" stopOpacity={0.22} /><stop offset="95%" stopColor="#06b6d4" stopOpacity={0.01} /></linearGradient></defs>
-              <CartesianGrid strokeDasharray="4 5" vertical={false} stroke="#e2e8f0" />
-              <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
-              <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+              <defs><linearGradient id="issuedGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#E7E5E4" stopOpacity={0.22} /><stop offset="95%" stopColor="#E7E5E4" stopOpacity={0.01} /></linearGradient><linearGradient id="returnedGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#A8A29E" stopOpacity={0.18} /><stop offset="95%" stopColor="#A8A29E" stopOpacity={0.01} /></linearGradient></defs>
+              <CartesianGrid strokeDasharray="4 5" vertical={false} stroke="#2B2922" />
+              <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: '#A8A29E', fontSize: 11 }} />
+              <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#A8A29E', fontSize: 10 }} />
               <Tooltip contentStyle={chartTooltipStyle} />
               <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-              <Area type="monotone" dataKey="issued" name="Issues" stroke="#4f46e5" strokeWidth={2.5} fill="url(#issuedGradient)" activeDot={{ r: 4 }} />
-              <Area type="monotone" dataKey="returned" name="Returns" stroke="#06b6d4" strokeWidth={2.5} fill="url(#returnedGradient)" activeDot={{ r: 4 }} />
+              <Area type="monotone" dataKey="issued" name="Issues" stroke="#E7E5E4" strokeWidth={2.5} fill="url(#issuedGradient)" activeDot={{ r: 4 }} />
+              <Area type="monotone" dataKey="returned" name="Returns" stroke="#A8A29E" strokeWidth={2.5} fill="url(#returnedGradient)" activeDot={{ r: 4 }} />
             </AreaChart></ResponsiveContainer>
           </div>
           {circulation.length === 0 && <p className="mt-1 text-center text-xs text-slate-500">Chart is ready; activity appears here as circulation is recorded.</p>}
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-subtle dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-          <div><h2 className="text-base font-bold text-slate-950 dark:text-white">Active-copy availability</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Archived-title copies are excluded from this chart</p></div>
+          <div><h2 className="text-base font-bold text-slate-950 dark:text-white">Active-copy availability</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Availability across the active catalogue</p></div>
           {availability.length ? <div className="relative mx-auto mt-2 h-56 max-w-xs" role="img" aria-label="Donut chart of available and unavailable active copies">
             <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={availability} dataKey="value" nameKey="name" innerRadius={65} outerRadius={92} paddingAngle={3} stroke="none">{availability.map((entry) => <Cell key={entry.name} fill={entry.color} />)}</Pie><Tooltip contentStyle={chartTooltipStyle} /></PieChart></ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><span className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">{catalogue.activePhysicalCopies}</span><span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">active copies</span></div>

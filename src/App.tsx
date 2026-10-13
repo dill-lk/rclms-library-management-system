@@ -115,7 +115,7 @@ export const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f3f6fb] dark:bg-[#0d1522] text-neutral-900 dark:text-neutral-100 flex flex-col selection:bg-indigo-600 selection:text-white">
+    <div className="app-shell min-h-screen bg-library-bg text-library-main font-body flex flex-col selection:bg-library-action selection:text-library-bg">
       {/* Sidebar Navigation */}
       <Sidebar
         isOpen={isSidebarOpen}
@@ -128,14 +128,14 @@ export const AppContent: React.FC = () => {
         <Header onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
 
         {/* Dynamic Main Body Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto animate-in fade-in duration-200">
+        <main className="app-main flex-1 p-4 sm:p-6 xl:p-8 max-w-[1600px] w-full mx-auto animate-in fade-in duration-200">
           <Suspense fallback={<div role="status" className="rounded-xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">Loading library view…</div>}>
             {renderActiveView()}
           </Suspense>
         </main>
 
         {/* Application footer */}
-        <footer className="px-6 py-4 border-t border-neutral-200 dark:border-neutral-800 text-center text-xs text-neutral-500 bg-white dark:bg-[#141f2e]">
+        <footer className="app-footer px-6 py-4 border-t border-neutral-200 dark:border-neutral-800 text-center text-xs text-neutral-500 bg-white dark:bg-[#141f2e]">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl mx-auto">
             <span className="font-heading font-semibold text-neutral-800 dark:text-neutral-200 flex items-center gap-2">
               <img src="/logo.png" alt="Emblem" className="w-4 h-5 object-contain inline-block" />
