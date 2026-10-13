@@ -38,7 +38,7 @@ export const ReturnsView: React.FC = () => {
       addToast({ type: 'error', title: 'Could not complete return', message: result.message });
       return;
     }
-    setPrintData({ type: 'receipt', title: 'Official Return & Clearance Slip', payload: { ...selectedRecord, returnDate: new Date().toISOString().split('T')[0], fineAmount: result.fine || 0, receivedBy: 'Library desk' } });
+    setPrintData({ type: 'receipt', title: 'Official Return & Clearance Slip', payload: { ...selectedRecord, documentKind: 'return', returnDate: new Date().toISOString().split('T')[0], fineAmount: result.fine || 0, receivedBy: 'Library desk' } });
     setSelectedRecordId(null); setSearchQuery(''); setReturnNotes('');
   };
 

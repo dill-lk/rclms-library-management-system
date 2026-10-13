@@ -90,12 +90,14 @@ export const FinesView: React.FC = () => {
       type: 'receipt',
       title: 'Fine Payment Receipt',
       payload: {
+        documentKind: 'fine',
         transactionId: selectedFine.fineId,
         bookTitle: selectedFine.bookTitle,
         memberName: selectedFine.memberName,
         memberId: selectedFine.memberId,
         fineAmount: selectedFine.amount,
-        issuedBy: `Desk Officer (${paymentMethod})`,
+        issuedBy: 'Desk Officer',
+        paymentMethod,
       },
     });
   };
@@ -289,6 +291,7 @@ export const FinesView: React.FC = () => {
                               type: 'receipt',
                               title: 'Official Fine Receipt',
                               payload: {
+                                documentKind: 'fine',
                                 transactionId: fine.receiptNumber || fine.fineId,
                                 bookTitle: fine.bookTitle,
                                 memberName: fine.memberName,
