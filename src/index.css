@@ -659,3 +659,36 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .dashboard-issue-books:visited { background: var(--action-light) !important; border: 1px solid var(--action-light) !important; color: var(--action-ink) !important; }
 .dashboard-issue-books:hover { background: var(--pure-white) !important; border-color: var(--pure-white) !important; color: var(--action-ink) !important; }
 .dashboard-issue-books svg { color: var(--action-ink) !important; }
+
+/* Reader pages are intentionally light, independent from the staff workspace's dark theme. */
+.borrower-auth,
+.borrower-portal { color-scheme: light; }
+.borrower-auth input,
+.borrower-auth select,
+.borrower-auth textarea,
+.borrower-portal input,
+.borrower-portal select,
+.borrower-portal textarea {
+  color: #172638 !important;
+  background-color: #fff !important;
+  border-color: #cbd5e1;
+}
+.borrower-auth input::placeholder,
+.borrower-portal input::placeholder,
+.borrower-auth textarea::placeholder,
+.borrower-portal textarea::placeholder {
+  color: #64748b !important;
+  opacity: 1;
+}
+.borrower-auth option,
+.borrower-portal option { background-color: #fff; color: #172638; }
+.borrower-auth input:focus,
+.borrower-auth select:focus,
+.borrower-auth textarea:focus,
+.borrower-portal input:focus,
+.borrower-portal select:focus,
+.borrower-portal textarea:focus {
+  border-color: #7d1d39 !important;
+  box-shadow: 0 0 0 3px rgba(125,29,57,.12);
+}
+.borrower-auth button[aria-label*="password"] { color: #475569 !important; }

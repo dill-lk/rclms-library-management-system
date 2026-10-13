@@ -105,7 +105,7 @@ export const BorrowerLoginView: React.FC<BorrowerLoginViewProps> = ({ onBackToPo
       : 'We’ll send recovery instructions if an account matches.';
 
   return (
-    <main className="min-h-screen bg-[#f5f2ed] px-4 py-6 text-slate-900 sm:px-6 sm:py-10">
+    <main className="borrower-auth min-h-screen bg-[#f5f2ed] px-4 py-6 text-slate-900 sm:px-6 sm:py-10">
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-6xl flex-col">
         <header className="flex items-center justify-between gap-4">
           <button

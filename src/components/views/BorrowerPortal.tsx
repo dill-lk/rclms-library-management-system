@@ -19,7 +19,15 @@ export const BorrowerPortal: React.FC = () => {
   );
   const filteredBooks = useMemo(() => {
     const search = query.trim().toLowerCase();
-    return catalogue.filter((book) => !search || [book.title, book.author, book.category, book.isbn, book.tags.join(' ')].join(' ').toLowerCase().includes(search));
+    return catalogue.filter((book) => {
+      const details = [
+        book.title, book.subtitle, book.author, book.category, book.isbn, book.publisher,
+        book.publicationYear, book.edition, book.language, book.shelfLocation, book.section,
+        book.description, book.tags.join(' '),
+        ...book.copies.map((copy) => [copy.barcode, copy.copyNumber, copy.shelfLocation].join(' ')),
+      ].join(' ').toLowerCase();
+      return !search || details.includes(search);
+    });
   }, [catalogue, query]);
 
   const navigate = (next: PortalSection) => {
@@ -30,7 +38,7 @@ export const BorrowerPortal: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f2ed] text-slate-900">
+    <div className="borrower-portal min-h-screen bg-[#f5f2ed] text-slate-900">
       <header className="sticky top-0 z-30 border-b border-[#eadfd2] bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
@@ -175,8 +183,16 @@ const BookGrid: React.FC<{ books: Book[]; onSelect: (book: Book) => void }> = ({
         <div className="p-4">
           <p className="text-[10px] font-bold uppercase tracking-wide text-[#8e6a35]">{book.category || 'Library collection'}</p>
           <h3 className="mt-1 line-clamp-2 min-h-10 text-sm font-bold leading-5 group-hover:text-[#6e1731]">{book.title}</h3>
-          <p className="mt-1 truncate text-xs text-slate-500">{book.author || 'Author not listed'}</p>
-          <p className={`mt-3 text-[10px] font-semibold ${book.availableCopies > 0 ? 'text-emerald-700' : 'text-amber-700'}`}>{book.availableCopies > 0 ? `${book.availableCopies} available` : 'Currently unavailable'}</p>
+          {book.subtitle && <p className="mt-1 line-clamp-1 text-[11px] italic text-slate-500">{book.subtitle}</p>}
+          <p className="mt-2 truncate text-xs font-medium text-slate-600">{book.author || 'Author not listed'}</p>
+          <dl className="mt-3 grid grid-cols-2 gap-x-2 gap-y-2 border-t border-slate-100 pt-3 text-left">
+            <BookDetailField label="ISBN" value={book.isbn || 'Not listed'} compact />
+            <BookDetailField label="Publisher" value={book.publisher || 'Not listed'} compact />
+            <BookDetailField label="Year / edition" value={`${book.publicationYear || '—'} · ${book.edition || 'Edition not listed'}`} compact />
+            <BookDetailField label="Language" value={book.language || 'Not listed'} compact />
+          </dl>
+          <p className={`mt-3 text-[10px] font-semibold ${book.availableCopies > 0 ? 'text-emerald-700' : 'text-amber-700'}`}>{book.availableCopies > 0 ? `${book.availableCopies} of ${book.totalCopies} copies available` : 'Currently unavailable'}</p>
+          <p className="mt-2 text-[10px] font-bold text-[#6e1731]">View all book details <span aria-hidden="true">→</span></p>
         </div>
       </button>
     ))}
@@ -195,28 +211,86 @@ const AccountField: React.FC<{ label: string; value: string }> = ({ label, value
   <div><dt className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</dt><dd className="mt-1 break-words text-sm font-medium text-slate-900">{value}</dd></div>
 );
 
+const BookDetailField: React.FC<{ label: string; value: string; compact?: boolean }> = ({ label, value, compact = false }) => (
+  <div className="min-w-0">
+    <dt className={`font-bold uppercase tracking-wide text-slate-500 ${compact ? 'text-[8px]' : 'text-[10px]'}`}>{label}</dt>
+    <dd className={`mt-1 break-words font-medium text-slate-900 ${compact ? 'line-clamp-2 text-[10px]' : 'text-sm'}`}>{value || 'Not listed'}</dd>
+  </div>
+);
+
 const BookDetailsModal: React.FC<{ book: Book; onClose: () => void }> = ({ book, onClose }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section role="dialog" aria-modal="true" aria-labelledby="reader-book-title" className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
+    <section role="dialog" aria-modal="true" aria-labelledby="reader-book-title" className="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:p-8">
       <button type="button" onClick={onClose} aria-label="Close book details" className="absolute right-4 top-4 rounded-xl p-2 text-slate-500 hover:bg-slate-100"><X className="h-4 w-4" /></button>
-      <div className="flex flex-col gap-5 sm:flex-row">
-        <div className="flex h-48 w-full shrink-0 items-center justify-center rounded-2xl bg-[#f2ece4] p-4 sm:w-36">
+      <div className="flex flex-col gap-5 border-b border-slate-100 pb-6 sm:flex-row">
+        <div className="flex h-56 w-full shrink-0 items-center justify-center rounded-2xl bg-[#f2ece4] p-4 sm:h-64 sm:w-48">
           {book.coverImage ? <img src={book.coverImage} alt="" className="h-full max-w-full object-contain" /> : <BookOpen className="h-12 w-12 text-[#9b7a61]" />}
         </div>
-        <div className="min-w-0 pt-2">
+        <div className="min-w-0 pt-2 sm:pr-8">
           <p className="text-[10px] font-bold uppercase tracking-wide text-[#8e6a35]">{book.category || 'Library collection'}</p>
-          <h2 id="reader-book-title" className="mt-2 text-xl font-bold">{book.title}</h2>
-          <p className="mt-1 text-sm text-slate-600">{book.author || 'Author not listed'}</p>
-          <p className={`mt-4 text-xs font-semibold ${book.availableCopies > 0 ? 'text-emerald-700' : 'text-amber-700'}`}>{book.availableCopies > 0 ? `${book.availableCopies} copies available` : 'No copies currently available'}</p>
+          <h2 id="reader-book-title" className="mt-2 text-2xl font-bold leading-tight">{book.title}</h2>
+          {book.subtitle && <p className="mt-1 text-sm italic text-slate-600">{book.subtitle}</p>}
+          <p className="mt-3 text-sm font-medium text-slate-700">By {book.author || 'Author not listed'}</p>
+          <p className={`mt-5 inline-flex rounded-full px-3 py-1.5 text-xs font-bold ${book.availableCopies > 0 ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'}`}>
+            {book.availableCopies > 0 ? `${book.availableCopies} of ${book.totalCopies} copies available` : 'No copies currently available'}
+          </p>
         </div>
       </div>
-      {book.description && <p className="mt-6 whitespace-pre-line text-sm leading-6 text-slate-600">{book.description}</p>}
-      <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-slate-100 pt-5">
-        <AccountField label="Language" value={book.language || 'Not listed'} />
-        <AccountField label="Shelf" value={book.shelfLocation || 'Ask library staff'} />
-        <AccountField label="Publisher" value={book.publisher || 'Not listed'} />
-        <AccountField label="Published" value={book.publicationYear ? String(book.publicationYear) : 'Not listed'} />
-      </dl>
+      <section className="mt-6" aria-labelledby="reader-book-information">
+        <h3 id="reader-book-information" className="text-sm font-bold">Book information</h3>
+        <dl className="mt-4 grid gap-x-5 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+          <BookDetailField label="ISBN-13" value={book.isbn} />
+          <BookDetailField label="Category / subject" value={book.category} />
+          <BookDetailField label="Publisher" value={book.publisher} />
+          <BookDetailField label="Publication year" value={book.publicationYear ? String(book.publicationYear) : 'Not listed'} />
+          <BookDetailField label="Edition" value={book.edition} />
+          <BookDetailField label="Language / medium" value={book.language} />
+          <BookDetailField label="Total copies" value={String(book.totalCopies ?? 0)} />
+          <BookDetailField label="Available copies" value={String(book.availableCopies ?? 0)} />
+          <BookDetailField label="Shelf location" value={book.shelfLocation} />
+          <BookDetailField label="Library section" value={book.section} />
+          <BookDetailField label="Catalogue rating" value={book.rating > 0 ? `${book.rating.toFixed(1)} / 5` : 'Not rated'} />
+          <BookDetailField label="Times borrowed" value={String(book.totalBorrows ?? 0)} />
+          <BookDetailField label="Added to library" value={book.addedDate} />
+        </dl>
+      </section>
+
+      <section className="mt-7 border-t border-slate-100 pt-5" aria-labelledby="reader-book-description">
+        <h3 id="reader-book-description" className="text-sm font-bold">Description</h3>
+        <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600">{book.description || 'No description has been added for this title.'}</p>
+      </section>
+
+      <section className="mt-6" aria-labelledby="reader-book-tags">
+        <h3 id="reader-book-tags" className="text-sm font-bold">Catalogue tags</h3>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {book.tags?.length ? book.tags.map((tag) => <span key={tag} className="rounded-full bg-[#f6e9df] px-2.5 py-1 text-[10px] font-semibold text-[#6e1731]">{tag}</span>) : <p className="text-xs text-slate-500">No tags listed.</p>}
+        </div>
+      </section>
+
+      <section className="mt-7 border-t border-slate-100 pt-5" aria-labelledby="reader-book-copies">
+        <h3 id="reader-book-copies" className="text-sm font-bold">Physical copies <span className="font-medium text-slate-500">({book.copies?.length || 0})</span></h3>
+        {book.copies?.length ? (
+          <div className="mt-3 overflow-x-auto rounded-xl border border-slate-100">
+            <table className="w-full min-w-[620px] text-left text-xs">
+              <thead className="bg-[#f7f4ef] text-[10px] uppercase tracking-wide text-slate-500">
+                <tr><th className="px-3 py-2.5">Copy</th><th className="px-3 py-2.5">Barcode</th><th className="px-3 py-2.5">Shelf</th><th className="px-3 py-2.5">Condition</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5">Expected return</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {book.copies.map((copy) => (
+                  <tr key={copy.copyId}>
+                    <td className="px-3 py-2.5 font-semibold">Copy {copy.copyNumber}</td>
+                    <td className="px-3 py-2.5 font-mono text-slate-600">{copy.barcode || 'Not listed'}</td>
+                    <td className="px-3 py-2.5">{copy.shelfLocation || book.shelfLocation || 'Not listed'}</td>
+                    <td className="px-3 py-2.5 capitalize">{copy.condition || 'Not listed'}</td>
+                    <td className="px-3 py-2.5"><span className={`rounded-full px-2 py-1 text-[10px] font-bold capitalize ${copy.status === 'available' ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-700'}`}>{copy.status.replace(/_/g, ' ')}</span></td>
+                    <td className="px-3 py-2.5 text-slate-600">{copy.dueDate || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <p className="mt-2 text-xs text-slate-500">Individual copy records are not available for this title.</p>}
+      </section>
     </section>
   </div>
 );
