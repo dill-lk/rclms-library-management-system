@@ -53,6 +53,12 @@ export interface CatalogFilter {
   publisher?: string;
 }
 
+export interface StockAuditScan {
+  copyId: string;
+  barcode: string;
+  scannedAt: string;
+}
+
 interface LibraryContextType {
   // Navigation & View
   activeTab: ActiveNavTab;
@@ -136,6 +142,8 @@ interface LibraryContextType {
   // Actions - Inventory & Audit
   verifyInventoryBarcode: (barcode: string) => { success: boolean; message: string; item?: InventoryItem };
   updateInventoryStatus: (itemId: string, status: InventoryItem['status']) => void;
+  loadInventoryAuditScans: (auditSessionId: string) => Promise<{ success: boolean; message: string; scans: StockAuditScan[] }>;
+  recordInventoryBarcode: (auditSessionId: string, barcode: string) => Promise<{ success: boolean; message: string; scan?: StockAuditScan }>;
 
   // Actions - Notifications
   markNotificationAsRead: (notificationId: string) => void;
@@ -1767,6 +1775,62 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     setInventory((prev) => prev.map((i) => (i.id === itemId ? { ...i, status } : i)));
   };
 
+  const loadInventoryAuditScans = async (auditSessionId: string): Promise<{ success: boolean; message: string; scans: StockAuditScan[] }> => {
+    if (!auditSessionId) return { success: false, message: 'Start an audit session first.', scans: [] };
+    if (!['super_admin', 'librarian', 'assistant_librarian'].includes(currentUser.role)) {
+      return { success: false, message: 'Only library staff can access stock audit records.', scans: [] };
+    }
+    const supabase = getSupabase();
+    if (!supabase) return { success: false, message: 'Stock Audit requires the connected library database.', scans: [] };
+
+    try {
+      const { data, error } = await supabase
+        .from('stock_audit_scans')
+        .select('copy_id, barcode, scanned_at')
+        .eq('audit_session_id', auditSessionId)
+        .order('scanned_at', { ascending: false });
+      if (error) return { success: false, message: error.message, scans: [] };
+      const scans = ((data || []) as Array<{ copy_id: string; barcode: string; scanned_at: string }>).map((row) => ({
+        copyId: row.copy_id,
+        barcode: row.barcode,
+        scannedAt: row.scanned_at,
+      }));
+      return { success: true, message: 'Audit scans loaded.', scans };
+    } catch (error: any) {
+      return { success: false, message: error?.message || 'Could not load this audit session.', scans: [] };
+    }
+  };
+
+  const recordInventoryBarcode = async (auditSessionId: string, barcode: string): Promise<{ success: boolean; message: string; scan?: StockAuditScan }> => {
+    const trimmedBarcode = barcode.trim();
+    if (!auditSessionId) return { success: false, message: 'Start an audit session before scanning.' };
+    if (!trimmedBarcode) return { success: false, message: 'Scan or enter a barcode first.' };
+    if (!['super_admin', 'librarian', 'assistant_librarian'].includes(currentUser.role)) {
+      return { success: false, message: 'Only library staff can record stock audit scans.' };
+    }
+    const supabase = getSupabase();
+    if (!supabase) return { success: false, message: 'Stock Audit requires the connected library database.' };
+
+    try {
+      const { data, error } = await supabase.rpc('record_stock_audit_scan', {
+        p_audit_session_id: auditSessionId,
+        p_barcode: trimmedBarcode,
+      });
+      if (error) return { success: false, message: error.message };
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row?.copy_id || !row?.barcode || !row?.scanned_at) {
+        return { success: false, message: 'The database did not confirm this stock scan.' };
+      }
+      return {
+        success: true,
+        message: 'Barcode verified against a registered physical copy and saved to this audit session.',
+        scan: { copyId: row.copy_id, barcode: row.barcode, scannedAt: row.scanned_at },
+      };
+    } catch (error: any) {
+      return { success: false, message: error?.message || 'Could not save this barcode scan.' };
+    }
+  };
+
   // Notifications
   const markNotificationAsRead = (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
@@ -1991,6 +2055,8 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         deletePublisher,
         verifyInventoryBarcode,
         updateInventoryStatus,
+        loadInventoryAuditScans,
+        recordInventoryBarcode,
         markNotificationAsRead,
         markAllNotificationsAsRead,
         addNotification,

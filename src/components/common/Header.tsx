@@ -88,7 +88,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
       case 'publishers':
         return { title: 'Publishers', desc: 'Procurement suppliers and contacts' };
       case 'inventory':
-        return { title: 'Stock Audit', desc: 'Physical inventory verification' };
+        return { title: 'Stock Audit', desc: 'Database-backed physical-copy verification (Beta)' };
       case 'reports':
         return { title: 'Analytics & Reports', desc: 'Circulation metrics and data exports' };
       case 'notifications':

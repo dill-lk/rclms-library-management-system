@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { CollegeCrest } from './CollegeCrest';
+import { BetaBadge } from './BetaBadge';
 import { ActiveNavTab } from '../../types';
 import {
   LayoutDashboard,
@@ -36,6 +37,7 @@ interface NavItem {
   icon: any;
   badge?: string | number;
   badgeColor?: string;
+  beta?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
@@ -77,7 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         { id: 'categories', label: 'Categories & DDC', icon: Layers },
         { id: 'authors', label: 'Authors', icon: Users },
         { id: 'publishers', label: 'Publishers', icon: Building2 },
-        { id: 'inventory', label: 'Stock Audit', icon: Boxes },
+        { id: 'inventory', label: 'Stock Audit', icon: Boxes, beta: true },
       ],
     },
     {
@@ -199,6 +201,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                           }`}
                         />
                         <span className="truncate">{item.label}</span>
+                        {item.beta && <BetaBadge />}
                       </div>
                       {item.badge && (
                         <span
