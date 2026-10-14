@@ -129,6 +129,7 @@ export const ZebraPrinterView: React.FC = () => {
       const cleanBarcode = cleanField(item.barcode);
       const fullBookTitle = cleanField(item.title);
       const numericCode = /^\d{4,}$/.test(cleanBarcode);
+      const accessionFontWidth = Math.max(5, Math.min(16, Math.floor(224 / Math.max(cleanBarcode.length, 1))));
       const estimatedModules = numericCode
         ? 35 + Math.ceil(cleanBarcode.length / 2) * 11
         : 35 + cleanBarcode.length * 11;
@@ -142,8 +143,8 @@ export const ZebraPrinterView: React.FC = () => {
       zpl += `^FO${slotLeftX},2^FB240,1,0,C^A0N,11,10^FDRAHULA COLLEGE^FS\n`;
       zpl += `^BY${moduleWidth},3,52\n`;
       zpl += `^FO${barcodeX},17^BCN,52,N,N,N,A^FD${cleanBarcode}^FS\n`;
-      zpl += `^FO${slotLeftX},71^FB240,1,0,C^A0N,10,9^FD${cleanBarcode}^FS\n`;
-      zpl += `^FO${slotLeftX},84^FB240,2,0,C^A0N,11,10^FD${fullBookTitle}^FS\n`;
+      zpl += `^FO${slotLeftX},71^FB240,1,0,C^A0N,16,${accessionFontWidth}^FD${cleanBarcode}^FS\n`;
+      zpl += `^FO${slotLeftX},90^FB240,2,0,C^A0N,11,10^FD${fullBookTitle}^FS\n`;
     });
 
     zpl += `^XZ\n`;
@@ -478,8 +479,8 @@ export const ZebraPrinterView: React.FC = () => {
                   <div className="w-full py-0.5">
                     <Barcode value={currentSticker1.barcode} width={220} height={38} showText={false} />
                   </div>
-                  <div className="flex flex-col items-center text-center text-[9px] font-mono text-neutral-900 dark:text-neutral-200">
-                    <span className="font-bold">{currentSticker1.barcode}</span>
+                  <div className="flex flex-col items-center text-center text-[12px] font-mono text-neutral-900 dark:text-neutral-200">
+                    <span className="font-bold text-[12px] leading-tight">{currentSticker1.barcode}</span>
                     <span className="max-w-full truncate text-[8px] text-neutral-500">{currentSticker1.title}</span>
                   </div>
                 </div>
@@ -518,8 +519,8 @@ export const ZebraPrinterView: React.FC = () => {
                   <div className="w-full py-0.5">
                     <Barcode value={currentSticker2.barcode} width={220} height={38} showText={false} />
                   </div>
-                  <div className="flex flex-col items-center text-center text-[9px] font-mono text-neutral-900 dark:text-neutral-200">
-                    <span className="font-bold">{currentSticker2.barcode}</span>
+                  <div className="flex flex-col items-center text-center text-[12px] font-mono text-neutral-900 dark:text-neutral-200">
+                    <span className="font-bold text-[12px] leading-tight">{currentSticker2.barcode}</span>
                     <span className="max-w-full truncate text-[8px] text-neutral-500">{currentSticker2.title}</span>
                   </div>
                 </div>
@@ -558,8 +559,8 @@ export const ZebraPrinterView: React.FC = () => {
                   <div className="w-full py-0.5">
                     <Barcode value={currentSticker3.barcode} width={220} height={38} showText={false} />
                   </div>
-                  <div className="flex flex-col items-center text-center text-[9px] font-mono text-neutral-900 dark:text-neutral-200">
-                    <span className="font-bold">{currentSticker3.barcode}</span>
+                  <div className="flex flex-col items-center text-center text-[12px] font-mono text-neutral-900 dark:text-neutral-200">
+                    <span className="font-bold text-[12px] leading-tight">{currentSticker3.barcode}</span>
                     <span className="max-w-full truncate text-[8px] text-neutral-500">{currentSticker3.title}</span>
                   </div>
                 </div>
