@@ -124,7 +124,7 @@ interface LibraryContextType {
   addBook: (book: Omit<Book, 'id' | 'totalBorrows' | 'addedDate' | 'availableCopies'>) => Promise<boolean>;
   updateBook: (book: Book) => Promise<boolean>;
   deleteBook: (bookId: string) => void;
-  restoreBook: (bookId: string) => Promise<void>;
+  restoreBook: (bookId: string) => Promise<boolean>;
   permanentlyDeleteArchivedBook: (bookId: string) => Promise<boolean>;
   permanentlyDeleteArchivedBooks: (bookIds: string[]) => Promise<ArchivedBookDeleteResult[]>;
   addBookCopy: (bookId: string, copyData?: { parigahanaAnkaya?: string; shelfLocation?: string; condition?: 'new' | 'good' | 'fair' | 'damaged' }) => void;
@@ -1141,22 +1141,51 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     addToast({ type: 'info', title: 'Book archived', message: `${book.title} was hidden from the active catalogue. Copies and circulation history were preserved; it can be restored.` });
   };
 
-  const restoreBook = async (bookId: string) => {
+  const restoreBook = async (bookId: string): Promise<boolean> => {
     const book = books.find((b) => b.id === bookId);
-    if (!book) return;
+    if (!book || !book.isArchived) {
+      addToast({
+        type: 'info',
+        title: 'Record not restored',
+        message: book ? `${book.title} is no longer archived. Nothing was changed.` : 'This record no longer exists in the catalogue. Nothing was changed.',
+      });
+      return false;
+    }
     if (!currentUser.permissions.includes('delete_books')) {
       addToast({ type: 'error', title: 'Permission denied', message: 'Only authorized library administrators can restore catalogue records.' });
-      return;
+      return false;
     }
     const supabase = getSupabase();
     if (supabase && !bookId.startsWith('bk-')) {
-      const { error } = await supabase.from('books').update({ is_archived: false }).eq('id', bookId);
-      if (error) { addToast({ type: 'error', title: 'Book was not restored', message: error.message }); return; }
-      await refreshAllData();
+      try {
+        const { data, error } = await supabase.from('books')
+          .update({ is_archived: false })
+          .eq('id', bookId)
+          .eq('is_archived', true)
+          .select('id');
+        if (error) {
+          addToast({ type: 'error', title: 'Book was not restored', message: error.message });
+          return false;
+        }
+        if (!data?.length) {
+          await refreshAllData();
+          addToast({ type: 'info', title: 'Record not restored', message: 'It may have been permanently deleted or restored already. Nothing was changed.' });
+          return false;
+        }
+        await refreshAllData();
+      } catch (error) {
+        addToast({
+          type: 'error',
+          title: 'Book restoration could not be confirmed',
+          message: error instanceof Error ? error.message : 'Refresh the archive before trying again.',
+        });
+        return false;
+      }
     } else {
-      setBooks((prev) => prev.map((item) => item.id === bookId ? { ...item, isArchived: false } : item));
+      setBooks((prev) => prev.map((item) => item.id === bookId && item.isArchived ? { ...item, isArchived: false } : item));
     }
     addToast({ type: 'success', title: 'Book restored', message: `${book.title} is back in the active catalogue.` });
+    return true;
   };
 
   const permanentlyDeleteArchivedBooks = async (bookIds: string[]): Promise<ArchivedBookDeleteResult[]> => {

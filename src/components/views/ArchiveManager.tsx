@@ -6,6 +6,7 @@ import {
   CircleAlert,
   LoaderCircle,
   RefreshCw,
+  RotateCcw,
   Search,
   ShieldCheck,
   Trash2,
@@ -31,6 +32,7 @@ export const ArchiveManager: React.FC = () => {
     currentUser,
     isSupabaseConfigured,
     refreshAllData,
+    restoreBook,
     permanentlyDeleteArchivedBooks,
   } = useLibrary();
   const [query, setQuery] = useState('');
@@ -38,10 +40,12 @@ export const ArchiveManager: React.FC = () => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [confirmationText, setConfirmationText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [restoringBookId, setRestoringBookId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [results, setResults] = useState<ArchivedBookDeleteResult[] | null>(null);
 
   const canDelete = currentUser.permissions.includes('delete_books');
+  const canRestore = currentUser.permissions.includes('delete_books');
   const archivedBooks = useMemo(() => books.filter((book) => Boolean(book.isArchived)), [books]);
   const filteredBooks = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -96,6 +100,17 @@ export const ArchiveManager: React.FC = () => {
     }
   };
 
+  const handleRestore = async (book: Book) => {
+    if (!canRestore || restoringBookId) return;
+    setRestoringBookId(book.id);
+    try {
+      const restored = await restoreBook(book.id);
+      if (restored) setSelectedIds((current) => current.filter((id) => id !== book.id));
+    } finally {
+      setRestoringBookId(null);
+    }
+  };
+
   const handleOpenConfirmation = () => {
     setConfirmationText('');
     setResults(null);
@@ -139,7 +154,7 @@ export const ArchiveManager: React.FC = () => {
           <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"><Archive className="h-5 w-5" /></span>
           <div>
             <h3 id="archive-manager-title" className="text-base font-bold text-neutral-950 dark:text-white">Archive Manager</h3>
-            <p className="mt-1 max-w-3xl text-xs leading-5 text-neutral-600 dark:text-neutral-400">Review archived catalogue titles and their copy details. Permanent deletion removes a title and its physical-copy records; linked circulation, reservation, or stock-audit history is protected.</p>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-neutral-600 dark:text-neutral-400">Restore a still-existing archived title to the active catalogue while keeping its copies and linked history. Permanent deletion is irreversible; linked circulation, reservation, or stock-audit history is protected.</p>
           </div>
         </div>
         <button type="button" onClick={handleRefresh} disabled={isRefreshing} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-neutral-300 px-3 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800">
@@ -170,11 +185,11 @@ export const ArchiveManager: React.FC = () => {
         </div>
       </div>
 
-      {isSupabaseConfigured && <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">Records shown are loaded from the library database. The deletion action rechecks archival status and dependent history in the database before each title is removed.</p>}
+      {isSupabaseConfigured && <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">Records shown are loaded from the library database. Restore rechecks that a record still exists and is archived; it only changes that archive flag. Permanent deletion separately rechecks archival status and dependent history.</p>}
 
       <div className="overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] border-collapse text-left text-xs">
+          <table className="w-full min-w-[1080px] border-collapse text-left text-xs">
             <thead className="bg-neutral-50 text-[10px] uppercase tracking-wide text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
               <tr>
                 {canDelete && <th scope="col" className="w-10 px-3 py-3"><span className="sr-only">Select</span></th>}
@@ -184,6 +199,7 @@ export const ArchiveManager: React.FC = () => {
                 <th scope="col" className="px-3 py-3">Copies</th>
                 <th scope="col" className="px-3 py-3">Linked history</th>
                 <th scope="col" className="px-3 py-3">Added</th>
+                {canRestore && <th scope="col" className="px-3 py-3">Action</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -204,16 +220,17 @@ export const ArchiveManager: React.FC = () => {
                       <p className="mt-1 text-[10px] text-neutral-500">{circulationCount} loan{circulationCount === 1 ? '' : 's'} · {reservationCount} reservation{reservationCount === 1 ? '' : 's'}</p>
                     </td>
                     <td className="whitespace-nowrap px-3 py-3.5 text-neutral-600 dark:text-neutral-300">{formatDate(book.addedDate)}</td>
+                    {canRestore && <td className="px-3 py-3.5"><button type="button" aria-label={`Restore ${book.title}`} title="Restore to the active catalogue; keep copies and history" disabled={Boolean(restoringBookId)} onClick={() => { void handleRestore(book); }} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-emerald-200 px-3 text-[11px] font-bold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-900 dark:text-emerald-200 dark:hover:bg-emerald-950/40">{restoringBookId === book.id ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}{restoringBookId === book.id ? 'Restoring…' : 'Restore'}</button></td>}
                   </tr>
                 );
               })}
-              {filteredBooks.length === 0 && <tr><td colSpan={canDelete ? 7 : 6} className="px-4 py-12 text-center"><Archive className="mx-auto h-7 w-7 text-neutral-300 dark:text-neutral-600" /><p className="mt-3 font-semibold text-neutral-800 dark:text-neutral-200">{archivedBooks.length ? 'No archived titles match this search' : 'No archived titles'}</p><p className="mt-1 text-xs text-neutral-500">{archivedBooks.length ? 'Try another title, author, ISBN, category, or location.' : 'When catalogue titles are archived, they will appear here.'}</p></td></tr>}
+              {filteredBooks.length === 0 && <tr><td colSpan={6 + Number(canDelete) + Number(canRestore)} className="px-4 py-12 text-center"><Archive className="mx-auto h-7 w-7 text-neutral-300 dark:text-neutral-600" /><p className="mt-3 font-semibold text-neutral-800 dark:text-neutral-200">{archivedBooks.length ? 'No archived titles match this search' : 'No archived titles'}</p><p className="mt-1 text-xs text-neutral-500">{archivedBooks.length ? 'Try another title, author, ISBN, category, or location.' : 'When catalogue titles are archived, they will appear here.'}</p></td></tr>}
             </tbody>
           </table>
         </div>
       </div>
 
-      {!canDelete && <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">You can review archive contents. Only accounts with the existing delete-books permission can select permanent deletions.</p>}
+      {!canRestore && <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">You can review archive contents. The existing delete-books permission is required to restore titles or select permanent deletions.</p>}
 
       {isConfirmOpen && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget && !isDeleting) closeConfirmation(); }}>
