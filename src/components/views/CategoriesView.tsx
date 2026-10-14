@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { Modal } from '../common/Modal';
 import { Category } from '../../types';
+import { isValidDdcCode } from '../../utils/ddcCode';
 import {
   Layers,
   Plus,
@@ -70,8 +71,8 @@ export const CategoriesView: React.FC = () => {
       setFormError('Enter a category name.');
       return;
     }
-    if (!/^\d{3}(\.\d+)?$/.test(trimmedDdcCode)) {
-      setFormError('Enter a DDC code with three digits, optionally followed by decimals (for example, 530 or 530.1).');
+    if (!isValidDdcCode(trimmedDdcCode)) {
+      setFormError('Enter a DDC code such as 530 or 530.1, or an institutional code such as Pra-04.');
       return;
     }
     setFormError('');
@@ -319,7 +320,7 @@ export const CategoriesView: React.FC = () => {
               <input
                 type="text"
                 required
-                placeholder="e.g. 530"
+                placeholder="e.g. 530 or Pra-04"
                 value={ddcCode}
                 onChange={(e) => {
                   setDdcCode(e.target.value);
@@ -327,7 +328,7 @@ export const CategoriesView: React.FC = () => {
                 }}
                 className="w-full px-3 py-2 font-mono bg-neutral-50 border border-neutral-200 rounded-xl text-neutral-900"
               />
-            <p className="mt-1 text-[11px] text-neutral-500">Use three digits, optionally followed by a decimal (for example, 530 or 530.1).</p>
+              <p className="mt-1 text-[11px] text-neutral-500">Use a three-digit DDC code (optionally with decimals, e.g. 530 or 530.1) or an institutional code like Pra-04.</p>
             </div>
           </div>
 

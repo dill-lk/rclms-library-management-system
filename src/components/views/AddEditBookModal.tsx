@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { Modal } from '../common/Modal';
 import { Book } from '../../types';
+import { isValidDdcCode } from '../../utils/ddcCode';
 import { Check, AlertCircle, Plus, BookOpen, Layers } from 'lucide-react';
 
 interface AddEditBookModalProps {
@@ -77,7 +78,7 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
     if (!accessionNumber.trim()) errs.accession = 'Book accession number is required.';
     if (!author.trim()) errs.author = 'Author name is required.';
     if (!category.trim()) errs.category = 'A valid category must be selected.';
-    if (!ddcCode.trim() || !/^\d{3}(\.\d+)?$/.test(ddcCode.trim())) errs.ddcCode = 'Select a category with a valid DDC code.';
+    if (!isValidDdcCode(ddcCode)) errs.ddcCode = 'Select a category with a valid DDC or institutional code.';
     if (!editBookData && totalCopies < 1) errs.totalCopies = 'Number of physical copies must be at least 1.';
     setErrors(errs);
     return Object.keys(errs).length === 0;
