@@ -38,6 +38,7 @@ export const CategoriesView: React.FC = () => {
   const [ddcCode, setDdcCode] = useState('');
   const [shelfLocation, setShelfLocation] = useState('');
   const [description, setDescription] = useState('');
+  const [formError, setFormError] = useState('');
 
   const openCreateModal = () => {
     setEditingCategory(null);
@@ -46,6 +47,7 @@ export const CategoriesView: React.FC = () => {
     setDdcCode('');
     setShelfLocation('');
     setDescription('');
+    setFormError('');
     setIsModalOpen(true);
   };
 
@@ -56,28 +58,39 @@ export const CategoriesView: React.FC = () => {
     setDdcCode(cat.ddcCode || '');
     setShelfLocation(cat.shelfLocation || '');
     setDescription(cat.description || '');
+    setFormError('');
     setIsModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !/^\d{3}(\.\d+)?$/.test(ddcCode.trim())) return;
+    const trimmedName = name.trim();
+    const trimmedDdcCode = ddcCode.trim();
+    if (!trimmedName) {
+      setFormError('Enter a category name.');
+      return;
+    }
+    if (!/^\d{3}(\.\d+)?$/.test(trimmedDdcCode)) {
+      setFormError('Enter a DDC code with three digits, optionally followed by decimals (for example, 530 or 530.1).');
+      return;
+    }
+    setFormError('');
 
     let saved = false;
     if (editingCategory) {
       saved = await updateCategory({
         ...editingCategory,
-        name: name.trim(),
+        name: trimmedName,
         sinhalaName: sinhalaName.trim(),
-        ddcCode: ddcCode.trim(),
+        ddcCode: trimmedDdcCode,
         shelfLocation: shelfLocation.trim(),
         description: description.trim(),
       });
     } else {
       saved = await addCategory({
-        name: name.trim(),
+        name: trimmedName,
         sinhalaName: sinhalaName.trim(),
-        ddcCode: ddcCode.trim(),
+        ddcCode: trimmedDdcCode,
         shelfLocation: shelfLocation.trim(),
         description: description.trim() || 'Library classification division.',
         icon: 'BookOpen',
@@ -277,7 +290,10 @@ export const CategoriesView: React.FC = () => {
               required
               placeholder="e.g. Physics & Mechanics"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                setFormError('');
+              }}
               className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-neutral-900"
             />
           </div>
@@ -303,11 +319,15 @@ export const CategoriesView: React.FC = () => {
               <input
                 type="text"
                 required
-              placeholder="e.g. 530"
+                placeholder="e.g. 530"
                 value={ddcCode}
-                onChange={(e) => setDdcCode(e.target.value)}
+                onChange={(e) => {
+                  setDdcCode(e.target.value);
+                  setFormError('');
+                }}
                 className="w-full px-3 py-2 font-mono bg-neutral-50 border border-neutral-200 rounded-xl text-neutral-900"
               />
+            <p className="mt-1 text-[11px] text-neutral-500">Use three digits, optionally followed by a decimal (for example, 530 or 530.1).</p>
             </div>
           </div>
 
@@ -336,6 +356,12 @@ export const CategoriesView: React.FC = () => {
               className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-neutral-900"
             />
           </div>
+
+          {formError && (
+            <p role="alert" className="text-xs font-semibold text-red-700">
+              {formError}
+            </p>
+          )}
 
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-neutral-200">
             <button
