@@ -47,6 +47,14 @@ export interface ToastMessage {
   duration?: number;
 }
 
+export interface ArchivedBookDeleteResult {
+  bookId: string;
+  title: string;
+  outcome: 'deleted' | 'blocked' | 'failed';
+  copyCount: number;
+  message: string;
+}
+
 export interface CatalogFilter {
   category?: string;
   author?: string;
@@ -118,6 +126,7 @@ interface LibraryContextType {
   deleteBook: (bookId: string) => void;
   restoreBook: (bookId: string) => Promise<void>;
   permanentlyDeleteArchivedBook: (bookId: string) => Promise<boolean>;
+  permanentlyDeleteArchivedBooks: (bookIds: string[]) => Promise<ArchivedBookDeleteResult[]>;
   addBookCopy: (bookId: string, copyData?: { parigahanaAnkaya?: string; shelfLocation?: string; condition?: 'new' | 'good' | 'fair' | 'damaged' }) => void;
   assignShelfToCopies: (copyIds: string[], shelfLocation: string) => Promise<{ success: boolean; message: string }>;
 
@@ -1150,55 +1159,130 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     addToast({ type: 'success', title: 'Book restored', message: `${book.title} is back in the active catalogue.` });
   };
 
-  const permanentlyDeleteArchivedBook = async (bookId: string): Promise<boolean> => {
-    const book = books.find((item) => item.id === bookId);
-    if (!book) return false;
-    if (!currentUser.permissions.includes('delete_books')) {
-      addToast({ type: 'error', title: 'Permission denied', message: 'Only authorized library administrators can permanently delete catalogue records.' });
-      return false;
-    }
-    if (!book.isArchived) {
-      addToast({ type: 'error', title: 'Archive the record first', message: 'Permanent deletion is only available for records already in Archived records.' });
-      return false;
-    }
+  const permanentlyDeleteArchivedBooks = async (bookIds: string[]): Promise<ArchivedBookDeleteResult[]> => {
+    const uniqueIds = [...new Set(bookIds.filter(Boolean))];
+    if (!uniqueIds.length) return [];
 
-    const circulationCount = circulation.filter((record) => record.bookId === bookId).length;
-    const reservationCount = reservations.filter((record) => record.bookId === bookId).length;
-    if (circulationCount || reservationCount) {
-      addToast({
-        type: 'error',
-        title: 'Record protected',
-        message: `Deletion is blocked to preserve linked history (${circulationCount} circulation record${circulationCount === 1 ? '' : 's'}, ${reservationCount} reservation${reservationCount === 1 ? '' : 's'}).`,
-      });
-      return false;
-    }
-
+    const bookById = new Map(books.map((book) => [book.id, book]));
+    const results = new Map<string, ArchivedBookDeleteResult>();
     const supabase = getSupabase();
-    if (supabase && !bookId.startsWith('bk-')) {
-      const { data, error } = await supabase.from('books').delete().eq('id', bookId).eq('is_archived', true).select('id');
-      if (error) {
-        addToast({
-          type: 'error',
-          title: 'Record was not deleted',
-          message: error.code === '23503' ? 'A linked circulation or inventory record still protects this title.' : error.message,
-        });
-        return false;
-      }
-      if (!data?.length) {
-        addToast({ type: 'error', title: 'Record was not deleted', message: 'It may no longer be archived, or your access may have changed. Refresh the catalogue and try again.' });
-        return false;
-      }
-      await refreshAllData();
-    } else {
-      setBooks((previous) => previous.filter((item) => item.id !== bookId));
+    const databaseIds = uniqueIds.filter((id) => !id.startsWith('bk-'));
+
+    if (!currentUser.permissions.includes('delete_books')) {
+      return uniqueIds.map((bookId) => ({
+        bookId,
+        title: bookById.get(bookId)?.title || 'Archived record',
+        outcome: 'blocked',
+        copyCount: bookById.get(bookId)?.copies.length || 0,
+        message: 'Your account does not have permission to permanently delete catalogue records.',
+      }));
     }
 
-    addToast({
-      type: 'success',
-      title: 'Archived record permanently deleted',
-      message: `${book.title} and ${book.totalCopies} linked physical-copy record${book.totalCopies === 1 ? '' : 's'} were removed.`,
+    if (supabase && databaseIds.length) {
+      const { data, error } = await supabase.rpc('permanently_delete_archived_books', { p_book_ids: databaseIds });
+      if (error) {
+        const outcome = error.code === '42501' ? 'blocked' : 'failed';
+        const message = error.code === '42501'
+          ? 'Your account is not authorized to permanently delete archived records.'
+          : 'The database could not confirm the deletion. No success was reported; refresh the archive and try again.';
+        databaseIds.forEach((bookId) => results.set(bookId, {
+          bookId,
+          title: bookById.get(bookId)?.title || 'Archived record',
+          outcome,
+          copyCount: bookById.get(bookId)?.copies.length || 0,
+          message,
+        }));
+      } else {
+        const rows = (data || []) as Array<{
+          deleted_book_id?: string;
+          book_title?: string | null;
+          outcome?: string;
+          linked_copy_count?: number | null;
+          message?: string | null;
+        }>;
+        rows.forEach((row) => {
+          if (!row.deleted_book_id) return;
+          const book = bookById.get(row.deleted_book_id);
+          const outcome = row.outcome === 'deleted' || row.outcome === 'blocked' ? row.outcome : 'failed';
+          results.set(row.deleted_book_id, {
+            bookId: row.deleted_book_id,
+            title: row.book_title || book?.title || 'Archived record',
+            outcome,
+            copyCount: Number(row.linked_copy_count ?? book?.copies.length ?? 0),
+            message: row.message || 'The database did not return an outcome for this record.',
+          });
+        });
+        databaseIds.forEach((bookId) => {
+          if (!results.has(bookId)) {
+            results.set(bookId, {
+              bookId,
+              title: bookById.get(bookId)?.title || 'Archived record',
+              outcome: 'failed',
+              copyCount: bookById.get(bookId)?.copies.length || 0,
+              message: 'No deletion result was returned for this record. Refresh the archive to confirm its status.',
+            });
+          }
+        });
+      }
+    }
+
+    const localIds = uniqueIds.filter((id) => !supabase || id.startsWith('bk-'));
+    localIds.forEach((bookId) => {
+      const book = bookById.get(bookId);
+      const copyCount = book?.copies.length || 0;
+      if (!book) {
+        results.set(bookId, { bookId, title: 'Archived record', outcome: 'failed', copyCount, message: 'This record is no longer available in the current archive.' });
+        return;
+      }
+      if (!book.isArchived) {
+        results.set(bookId, { bookId, title: book.title, outcome: 'blocked', copyCount, message: 'Only records that are still archived can be permanently deleted.' });
+        return;
+      }
+      const circulationCount = circulation.filter((record) => record.bookId === bookId).length;
+      const reservationCount = reservations.filter((record) => record.bookId === bookId).length;
+      if (circulationCount || reservationCount) {
+        results.set(bookId, {
+          bookId,
+          title: book.title,
+          outcome: 'blocked',
+          copyCount,
+          message: `Deletion is blocked to preserve ${circulationCount} circulation record${circulationCount === 1 ? '' : 's'} and ${reservationCount} reservation${reservationCount === 1 ? '' : 's'}.`,
+        });
+        return;
+      }
+      results.set(bookId, {
+        bookId,
+        title: book.title,
+        outcome: 'deleted',
+        copyCount,
+        message: `${copyCount} linked physical-copy record${copyCount === 1 ? '' : 's'} removed with the title.`,
+      });
     });
-    return true;
+
+    const deletedIds = uniqueIds.filter((bookId) => results.get(bookId)?.outcome === 'deleted');
+    if (deletedIds.length) {
+      setBooks((previous) => previous.filter((item) => !deletedIds.includes(item.id)));
+      if (supabase && deletedIds.some((id) => !id.startsWith('bk-'))) await refreshAllData();
+    }
+
+    return uniqueIds.map((bookId) => results.get(bookId) || {
+      bookId,
+      title: bookById.get(bookId)?.title || 'Archived record',
+      outcome: 'failed',
+      copyCount: bookById.get(bookId)?.copies.length || 0,
+      message: 'No deletion result was recorded for this item.',
+    });
+  };
+
+  const permanentlyDeleteArchivedBook = async (bookId: string): Promise<boolean> => {
+    const result = (await permanentlyDeleteArchivedBooks([bookId]))[0];
+    if (!result) return false;
+    if (result.outcome === 'deleted') {
+      addToast({ type: 'success', title: 'Archived record permanently deleted', message: `${result.title}: ${result.message}` });
+      return true;
+    }
+    addToast({ type: 'error', title: result.outcome === 'blocked' ? 'Record protected' : 'Record was not deleted', message: result.message });
+    return false;
   };
 
   const addBookCopy = async (bookId: string, copyData?: { parigahanaAnkaya?: string; shelfLocation?: string; condition?: 'new' | 'good' | 'fair' | 'damaged' }) => {
@@ -2419,6 +2503,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         deleteBook,
         restoreBook,
         permanentlyDeleteArchivedBook,
+        permanentlyDeleteArchivedBooks,
         addBookCopy,
         assignShelfToCopies,
         addMember,

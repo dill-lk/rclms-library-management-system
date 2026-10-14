@@ -102,7 +102,7 @@ export const ZebraPrinterView: React.FC = () => {
   const currentStickerCount = [currentSticker1, currentSticker2, currentSticker3].filter(Boolean).length;
   const isRowComplete = currentStickerCount === 3;
 
-  // Generate Centered printer file-II Code matching Zebra Designer 3-Across Setup
+  // Generate ZPL for the preferred 3-across 30 × 15 mm sticker roll.
   const generateZplForRow = (row: (LabelQueueItem | null)[]) => {
     // 98mm total roll width = 784 dots (203 DPI = 8 dots/mm)
     // Left margin: 2.00mm = 16 dots
@@ -112,7 +112,6 @@ export const ZebraPrinterView: React.FC = () => {
     // Slot 2: Left = 272 dots (Center = 392 dots)
     // Slot 3: Left = 528 dots (Center = 648 dots)
     const slotLefts = [16, 272, 528];
-    const barcodeLefts = [48, 304, 560]; // Balanced barcode start inside each 30mm slot
 
     let zpl = `^XA\n`;
     zpl += `^PW784\n`;
@@ -126,19 +125,25 @@ export const ZebraPrinterView: React.FC = () => {
       if (!item) return; // Leave empty slot unprinted
 
       const slotLeftX = slotLefts[slotIdx];
-      const barcodeX = barcodeLefts[slotIdx];
       const cleanField = (value: string) => value.replace(/[\^~\x00-\x1F]/g, ' ').trim();
       const cleanBarcode = cleanField(item.barcode);
       const fullBookTitle = cleanField(item.title);
-      const shelfLocation = cleanField(item.shelfLocation || 'Shelf not assigned');
+      const numericCode = /^\d{4,}$/.test(cleanBarcode);
+      const estimatedModules = numericCode
+        ? 35 + Math.ceil(cleanBarcode.length / 2) * 11
+        : 35 + cleanBarcode.length * 11;
+      const availableDots = 208; // 30 mm slot minus 2 mm quiet margins on both sides
+      const moduleWidth = Math.max(1, Math.min(3, Math.floor(availableDots / (estimatedModules + 20))));
+      const barcodeWidth = estimatedModules * moduleWidth;
+      const barcodeX = slotLeftX + Math.max(16, Math.round((240 - barcodeWidth) / 2));
 
-      // The content is distributed through the full 120-dot sticker height,
-      // keeping the visual centre around the barcode and accession number.
+      // The barcode uses the available sticker width and a taller print height;
+      // shelf location is intentionally not printed on catalog labels.
       zpl += `^FO${slotLeftX},2^FB240,1,0,C^A0N,11,10^FDRAHULA COLLEGE^FS\n`;
-      zpl += `^FO${barcodeX},18^BCN,36,N,N,N,A^FD${cleanBarcode}^FS\n`;
-      zpl += `^FO${slotLeftX},56^FB240,1,0,C^A0N,11,10^FD${cleanBarcode}^FS\n`;
-      zpl += `^FO${slotLeftX},70^FB240,2,0,C^A0N,10,9^FD${fullBookTitle}^FS\n`;
-      zpl += `^FO${slotLeftX},102^FB240,1,0,C^A0N,9,8^FDShelf: ${shelfLocation}^FS\n`;
+      zpl += `^BY${moduleWidth},3,52\n`;
+      zpl += `^FO${barcodeX},17^BCN,52,N,N,N,A^FD${cleanBarcode}^FS\n`;
+      zpl += `^FO${slotLeftX},71^FB240,1,0,C^A0N,10,9^FD${cleanBarcode}^FS\n`;
+      zpl += `^FO${slotLeftX},84^FB240,2,0,C^A0N,11,10^FD${fullBookTitle}^FS\n`;
     });
 
     zpl += `^XZ\n`;
@@ -467,18 +472,15 @@ export const ZebraPrinterView: React.FC = () => {
 
               {currentSticker1 ? (
                 <div className="space-y-1.5 my-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-bold text-red-700 dark:text-red-400 font-mono">RAHULA COLLEGE</span>
-                    <span className="text-[8px] bg-neutral-100 dark:bg-neutral-800 px-1 rounded font-mono text-neutral-500">
-                      {currentSticker1.shelfLocation}
-                    </span>
+                  <div className="text-center">
+                    <span className="text-[9px] font-bold text-red-700 dark:text-red-400 font-mono">RAHULA COLLEGE LIBRARY</span>
                   </div>
-                  <div className="py-0.5">
-                    <Barcode value={currentSticker1.barcode} width={140} height={22} showText={false} />
+                  <div className="w-full py-0.5">
+                    <Barcode value={currentSticker1.barcode} width={220} height={38} showText={false} />
                   </div>
-                  <div className="flex items-center justify-between text-[9px] font-mono text-neutral-900 dark:text-neutral-200">
+                  <div className="flex flex-col items-center text-center text-[9px] font-mono text-neutral-900 dark:text-neutral-200">
                     <span className="font-bold">{currentSticker1.barcode}</span>
-                    <span className="truncate max-w-[90px] text-[8px] text-neutral-500">{currentSticker1.title}</span>
+                    <span className="max-w-full truncate text-[8px] text-neutral-500">{currentSticker1.title}</span>
                   </div>
                 </div>
               ) : (
@@ -510,18 +512,15 @@ export const ZebraPrinterView: React.FC = () => {
 
               {currentSticker2 ? (
                 <div className="space-y-1.5 my-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-bold text-red-700 dark:text-red-400 font-mono">RAHULA COLLEGE</span>
-                    <span className="text-[8px] bg-neutral-100 dark:bg-neutral-800 px-1 rounded font-mono text-neutral-500">
-                      {currentSticker2.shelfLocation}
-                    </span>
+                  <div className="text-center">
+                    <span className="text-[9px] font-bold text-red-700 dark:text-red-400 font-mono">RAHULA COLLEGE LIBRARY</span>
                   </div>
-                  <div className="py-0.5">
-                    <Barcode value={currentSticker2.barcode} width={140} height={22} showText={false} />
+                  <div className="w-full py-0.5">
+                    <Barcode value={currentSticker2.barcode} width={220} height={38} showText={false} />
                   </div>
-                  <div className="flex items-center justify-between text-[9px] font-mono text-neutral-900 dark:text-neutral-200">
+                  <div className="flex flex-col items-center text-center text-[9px] font-mono text-neutral-900 dark:text-neutral-200">
                     <span className="font-bold">{currentSticker2.barcode}</span>
-                    <span className="truncate max-w-[90px] text-[8px] text-neutral-500">{currentSticker2.title}</span>
+                    <span className="max-w-full truncate text-[8px] text-neutral-500">{currentSticker2.title}</span>
                   </div>
                 </div>
               ) : (
@@ -553,18 +552,15 @@ export const ZebraPrinterView: React.FC = () => {
 
               {currentSticker3 ? (
                 <div className="space-y-1.5 my-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-bold text-red-700 dark:text-red-400 font-mono">RAHULA COLLEGE</span>
-                    <span className="text-[8px] bg-neutral-100 dark:bg-neutral-800 px-1 rounded font-mono text-neutral-500">
-                      {currentSticker3.shelfLocation}
-                    </span>
+                  <div className="text-center">
+                    <span className="text-[9px] font-bold text-red-700 dark:text-red-400 font-mono">RAHULA COLLEGE LIBRARY</span>
                   </div>
-                  <div className="py-0.5">
-                    <Barcode value={currentSticker3.barcode} width={140} height={22} showText={false} />
+                  <div className="w-full py-0.5">
+                    <Barcode value={currentSticker3.barcode} width={220} height={38} showText={false} />
                   </div>
-                  <div className="flex items-center justify-between text-[9px] font-mono text-neutral-900 dark:text-neutral-200">
+                  <div className="flex flex-col items-center text-center text-[9px] font-mono text-neutral-900 dark:text-neutral-200">
                     <span className="font-bold">{currentSticker3.barcode}</span>
-                    <span className="truncate max-w-[90px] text-[8px] text-neutral-500">{currentSticker3.title}</span>
+                    <span className="max-w-full truncate text-[8px] text-neutral-500">{currentSticker3.title}</span>
                   </div>
                 </div>
               ) : (

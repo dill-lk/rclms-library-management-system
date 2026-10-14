@@ -15,9 +15,10 @@ A modern, responsive Library Management System built for Rahula College with a c
 - **Zebra ZD230 Resolution**: 203 DPI (8 dots/mm)
   - `^PW784` (98mm * 8 = 784 dots print width)
   - `^LL120` (15mm * 8 = 120 dots label length)
-  - Slot 1 (Left): X = 16 dots (2mm)
-  - Slot 2 (Center): X = 272 dots (34mm)
-  - Slot 3 (Right): X = 528 dots (66mm)
+- Slot 1 (Left): X = 16 dots (2mm)
+- Slot 2 (Center): X = 272 dots (34mm)
+- Slot 3 (Right): X = 528 dots (66mm)
+- Each sticker prints the library heading, a centered Code 128 barcode scaled to the slot width, its human-readable value, and a compact title; shelf locations remain catalogue data and are not printed on barcode labels.
 
 ### 2. 3-Book Queue & Buffer Automation
 - **Automatic 3-Across Waiting Logic**: The system stages incoming books in a real-time buffer (`Slot 1`, `Slot 2`, `Slot 3`).
@@ -51,12 +52,12 @@ A modern, responsive Library Management System built for Rahula College with a c
 
 ## Database setup and safety
 
-- For a new Supabase project, run `supabase/schema.sql`, then `supabase/migrations/20261013_idempotent_catalogue_and_access.sql`, `supabase/migrations/20261013_stock_audit_scans.sql`, `supabase/migrations/20261013_profile_audit_beta_features.sql`, and finally `supabase/migrations/20261013_undo_rpc_acl_hardening.sql`.
+- For a new Supabase project, run `supabase/schema.sql`, then `supabase/migrations/20261013_idempotent_catalogue_and_access.sql`, `supabase/migrations/20261013_stock_audit_scans.sql`, `supabase/migrations/20261013_profile_audit_beta_features.sql`, `supabase/migrations/20261013_undo_rpc_acl_hardening.sql`, and finally `supabase/migrations/20261014_archive_manager_safety.sql`.
 - `supabase/rclms_supabase_catalogue_schema.sql` is a secured legacy alternative for databases using `physical_copies`; the current app uses `book_copies` and `schema.sql`.
-- For an existing project, apply the catalogue migration after reviewing its read-only duplicate-accession report; it does not delete or merge existing records. Then apply `supabase/migrations/20261013_stock_audit_scans.sql` for the barcode-validating, staff-only scan ledger and `supabase/migrations/20261013_profile_audit_beta_features.sql` for profile restrictions, the append-only audit log, and recent circulation undo. Finally apply `supabase/migrations/20261013_undo_rpc_acl_hardening.sql` to revoke anonymous execution of the undo RPC. The stock scan migration must remain the only write path for Stock Audit records.
+- For an existing project, apply the catalogue migration after reviewing its read-only duplicate-accession report; it does not delete or merge existing records. Then apply `supabase/migrations/20261013_stock_audit_scans.sql` for the barcode-validating, staff-only scan ledger and `supabase/migrations/20261013_profile_audit_beta_features.sql` for profile restrictions, the append-only audit log, and recent circulation undo. Apply `supabase/migrations/20261013_undo_rpc_acl_hardening.sql` to revoke anonymous execution of the undo RPC, then `supabase/migrations/20261014_archive_manager_safety.sql` for safe archived-title deletion. The stock scan migration must remain the only write path for Stock Audit records.
 - The migration adds `books.is_archived`; catalogue removal and duplicate cleanup archive records instead of deleting them. Authorized administrators can restore archived titles from the catalogue.
 - Duplicate review groups only exact normalized accession-number matches. It requires an explicit keeper choice, preserves history/copies, and blocks archiving a candidate while it has open loans or active reservations.
-- Permanent deletion is a separate administrator-only action available only for already-archived titles. The confirmation names the linked physical-copy count, requires typing the exact title, and blocks deletion when circulation or reservation history is linked; the database delete also filters on `is_archived = true`.
+- Permanent deletion is a separate administrator-only action available only for already-archived titles. The Settings Archive Manager supports search and multi-selection, requires typing `DELETE`, and reports each title's database-confirmed outcome. Its RPC rechecks archived status and linked circulation/reservation history transactionally; reservations are restricted rather than cascaded, and circulation or stock-audit references continue to block deletion. Successful deletion cascades only to the title's linked physical-copy rows.
 - The migration adds atomic, retry-safe catalogue saving and restricts database writes to authorized library staff. Public signup remains limited to student and teacher profiles.
 - Anyone can create a student or teacher reader login, but that login does not create, read, or link an official Members Directory record. Only authorized library staff manage official members. Signed-in users can update only their own name and phone; their sign-in email, role, permissions, and school identifiers remain read-only. Staff can use the Beta reminders, barcode stock audit, reversible circulation actions, and append-only audit log; full verified JSON backups are super-administrator-only.
 - Do not use or publish default passwords. Create accounts through Supabase Auth and rotate any temporary credentials previously shared in documentation.

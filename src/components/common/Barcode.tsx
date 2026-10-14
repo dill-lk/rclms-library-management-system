@@ -30,11 +30,16 @@ export const Barcode: React.FC<BarcodeProps> = ({
     }
 
     try {
+      const numericCode = /^\d{4,}$/.test(value.trim());
+      const estimatedModules = numericCode
+        ? 35 + Math.ceil(value.trim().length / 2) * 11
+        : 35 + value.trim().length * 11;
+      const moduleWidth = Math.max(1, Math.min(3, (width - 12) / Math.max(1, estimatedModules)));
       JsBarcode(svg, value, {
         format: 'CODE128',
         lineColor: '#0B0A08',
         background: '#FFFFFF',
-        width: 1.25,
+        width: moduleWidth,
         height: Math.max(24, height),
         displayValue: false,
         margin: 6,
@@ -43,7 +48,7 @@ export const Barcode: React.FC<BarcodeProps> = ({
     } catch {
       setIsValid(false);
     }
-  }, [height, value]);
+  }, [height, value, width]);
 
   return (
     <div

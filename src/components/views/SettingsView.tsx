@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { DeviceSessionsPanel } from './DeviceSessionsPanel';
+import { ArchiveManager } from './ArchiveManager';
 import {
   Settings as SettingsIcon,
   Save,
@@ -277,6 +278,7 @@ export const SettingsView: React.FC = () => {
       </form>
 
       <DeviceSessionsPanel />
+      <ArchiveManager />
     </div>
   );
 };
