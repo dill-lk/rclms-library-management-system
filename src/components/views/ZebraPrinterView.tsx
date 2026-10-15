@@ -24,7 +24,8 @@ import {
   ZoomIn,
   AlertCircle,
   Wifi,
-  ExternalLink
+  ExternalLink,
+  RefreshCw
 } from 'lucide-react';
 
 export const ZebraPrinterView: React.FC = () => {
@@ -37,6 +38,7 @@ export const ZebraPrinterView: React.FC = () => {
     clearLabelQueue,
     flushNextLabelRow,
     assignShelfToCopies,
+    refreshAllData,
     addToast,
   } = useLibrary();
 
@@ -59,6 +61,7 @@ export const ZebraPrinterView: React.FC = () => {
   const [isBrowserPrintActive, setIsBrowserPrintActive] = useState(false);
   const [activeHost, setActiveHost] = useState('http://127.0.0.1:9100');
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [copiedZpl, setCopiedZpl] = useState<boolean>(false);
   const [previewZoom, setPreviewZoom] = useState<boolean>(true);
 
@@ -80,6 +83,16 @@ export const ZebraPrinterView: React.FC = () => {
       if (result.defaultPrinter) setZebraDevice(result.defaultPrinter);
     }).catch(() => setIsBrowserPrintActive(false));
   }, []);
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await refreshAllData();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const selectedBook = books.find((b) => b.id === selectedBookId) || books[0];
 
@@ -377,6 +390,17 @@ export const ZebraPrinterView: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => void handleRefresh()}
+            disabled={isRefreshing}
+            aria-label="Refresh print data"
+            title="Reload the latest catalogue and physical copy records"
+            className="px-4 py-2.5 rounded-xl border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 font-bold text-xs flex items-center gap-2 transition disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Refreshing...' : 'Refresh data'}</span>
+          </button>
           <button
             onClick={() => printZplWithBrowser(fullZplCode)}
             disabled={labelQueue.length === 0 || isPrinting}
