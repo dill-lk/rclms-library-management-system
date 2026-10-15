@@ -247,7 +247,7 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-bold text-neutral-900 mb-1">
                 Category (DDC) *
@@ -286,33 +286,6 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                   <option key={p.id} value={p.name} />
                 ))}
               </datalist>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block font-bold text-neutral-700 mb-1">
-                  Year
-                </label>
-                <input
-                  type="number"
-                  value={publicationYear}
-                  onChange={(e) => setPublicationYear(Number(e.target.value))}
-                  className="w-full px-3 py-2 font-mono bg-white border border-neutral-300 rounded-lg text-neutral-900"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-neutral-700 mb-1">
-                  Edition
-                </label>
-                <input
-                  type="text"
-                  value={edition}
-                  onChange={(e) => setEdition(e.target.value)}
-                  placeholder="1st Edition"
-                  className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-lg text-neutral-900"
-                />
-              </div>
             </div>
           </div>
         </div>
