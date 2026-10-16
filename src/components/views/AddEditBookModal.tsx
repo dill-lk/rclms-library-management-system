@@ -3,7 +3,9 @@ import { useLibrary } from '../../context/LibraryContext';
 import { Modal } from '../common/Modal';
 import { Book } from '../../types';
 import { isValidDdcCode } from '../../utils/ddcCode';
-import { Check, AlertCircle, Plus, BookOpen, Layers } from 'lucide-react';
+import { BOOK_COVER_BUCKET, createBookCoverStoragePath, discardUnattachedBookCover, prepareBookCoverUpload, validateBookCoverFile } from '../../utils/bookCovers';
+import { getSupabase } from '../../utils/supabaseClient';
+import { Check, AlertCircle, ImagePlus, Upload, X } from 'lucide-react';
 
 interface AddEditBookModalProps {
   isOpen: boolean;
@@ -16,7 +18,7 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
   onClose,
   editBookData,
 }) => {
-  const { addBook, updateBook, categories, authors, publishers, setActiveTab } = useLibrary();
+  const { addBook, updateBook, categories, authors, publishers, setActiveTab, isSupabaseConfigured } = useLibrary();
 
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
@@ -33,6 +35,13 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const saveLockRef = useRef(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState('');
+
+  useEffect(() => () => {
+    if (coverPreview.startsWith('blob:')) URL.revokeObjectURL(coverPreview);
+  }, [coverPreview]);
 
   useEffect(() => {
     if (editBookData) {
@@ -47,6 +56,8 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       setLanguage(editBookData.language);
       setTotalCopies(editBookData.totalCopies);
       setShelfIdentifier(editBookData.shelfLocation);
+      setCoverFile(null);
+      setCoverPreview('');
     } else {
       setTitle('');
       setAuthor('');
@@ -59,7 +70,10 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       setLanguage('Sinhala');
       setTotalCopies(1);
       setShelfIdentifier('');
+      setCoverFile(null);
+      setCoverPreview('');
     }
+    if (coverInputRef.current) coverInputRef.current.value = '';
     setErrors({});
   }, [editBookData, isOpen, categories, authors, publishers]);
 
@@ -84,13 +98,57 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
     return Object.keys(errs).length === 0;
   };
 
+  const handleCoverSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const message = validateBookCoverFile(file);
+    if (message) {
+      setCoverFile(null);
+      setCoverPreview('');
+      setErrors((current) => ({ ...current, coverImage: message }));
+      event.target.value = '';
+      return;
+    }
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
+    setErrors((current) => {
+      const next = { ...current };
+      delete next.coverImage;
+      return next;
+    });
+  };
+
+  const clearSelectedCover = () => {
+    setCoverFile(null);
+    setCoverPreview('');
+    if (coverInputRef.current) coverInputRef.current.value = '';
+  };
+
   const handleSave = async (addAnother = false) => {
     if (saveLockRef.current) return;
     if (!validate()) return;
 
     saveLockRef.current = true;
     setIsSaving(true);
+    let uploadedCoverPath: string | undefined;
     try {
+      let uploadedCoverUrl: string | undefined;
+      if (coverFile) {
+        if (!isSupabaseConfigured) throw new Error('Book cover uploads need the connected library storage service.');
+        const supabase = getSupabase();
+        if (!supabase) throw new Error('The connected library storage service could not be initialized.');
+
+        const optimizedCover = await prepareBookCoverUpload(coverFile);
+        uploadedCoverPath = createBookCoverStoragePath();
+        const { error: uploadError } = await supabase.storage.from(BOOK_COVER_BUCKET).upload(uploadedCoverPath, optimizedCover, {
+          upsert: false,
+          contentType: 'image/webp',
+          cacheControl: '31536000',
+        });
+        if (uploadError) throw new Error(uploadError.message || 'The cover image could not be uploaded.');
+        uploadedCoverUrl = supabase.storage.from(BOOK_COVER_BUCKET).getPublicUrl(uploadedCoverPath).data.publicUrl;
+      }
+
       if (editBookData) {
         const updated: Book = {
           ...editBookData,
@@ -104,9 +162,16 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
           language,
           shelfLocation: shelfIdentifier.trim(),
           section: '',
+          ...(uploadedCoverUrl ? { coverImage: uploadedCoverUrl } : {}),
         };
         const saved = await updateBook(updated);
-        if (saved !== false) onClose();
+        if (saved !== false) {
+          uploadedCoverPath = undefined;
+          onClose();
+        } else {
+          await discardUnattachedBookCover(uploadedCoverPath);
+          uploadedCoverPath = undefined;
+        }
       } else {
         const saved = await addBook({
           title: title.trim(),
@@ -124,17 +189,24 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
           rating: 4.8,
           tags: [],
           copies: [],
-        });
+          ...(uploadedCoverUrl ? { coverImage: uploadedCoverUrl } : {}),
+        }, uploadedCoverPath);
 
-        if (saved === false) return;
+        if (saved === false) {
+          uploadedCoverPath = undefined;
+          return;
+        }
+        uploadedCoverPath = undefined;
         if (addAnother) {
           setTitle('');
           setAccessionNumber('');
+          clearSelectedCover();
         } else {
           onClose();
         }
       }
     } catch (error) {
+      await discardUnattachedBookCover(uploadedCoverPath);
       setErrors((current) => ({
         ...current,
         form: error instanceof Error ? error.message : 'The book could not be saved. Please try again.',
@@ -144,6 +216,8 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       setIsSaving(false);
     }
   };
+
+  const coverDisplayUrl = coverPreview || editBookData?.coverImage || '';
 
   return (
     <Modal
@@ -289,6 +363,49 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Optional Section: Cover Image */}
+        <section className="space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3.5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="flex items-center gap-2 font-bold text-neutral-900">
+                <ImagePlus className="h-4 w-4" /> Book cover image <span className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Optional</span>
+              </h3>
+              <p className="mt-1 max-w-xl text-[10px] leading-4 text-neutral-600">
+                JPEG, PNG, or WebP up to 12 MB and 4096 × 4096 pixels. Covers are resized and compressed to WebP (maximum 120 KiB) before being stored outside the database.
+              </p>
+            </div>
+            <label className={`inline-flex cursor-pointer items-center justify-center gap-2 self-start rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[11px] font-bold text-neutral-800 hover:bg-neutral-100 ${isSaving || !isSupabaseConfigured ? 'cursor-not-allowed opacity-50' : ''}`}>
+              <Upload className="h-3.5 w-3.5" /> {coverFile ? 'Choose another image' : 'Choose image'}
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleCoverSelection}
+                disabled={isSaving || !isSupabaseConfigured}
+                className="sr-only"
+              />
+            </label>
+          </div>
+          {coverDisplayUrl ? (
+            <div className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-2.5">
+              <img src={coverDisplayUrl} alt={`Cover preview for ${title || editBookData?.title || 'book'}`} className="h-24 w-16 rounded border border-neutral-200 bg-neutral-100 object-contain" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold text-neutral-800">{coverFile ? 'New cover selected' : 'Current cover'}</p>
+                <p className="mt-0.5 truncate text-[10px] text-neutral-500">{coverFile ? coverFile.name : 'This cover stays unchanged unless you choose a replacement.'}</p>
+              </div>
+              {coverFile && (
+                <button type="button" onClick={clearSelectedCover} disabled={isSaving} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold text-neutral-600 hover:bg-neutral-100 disabled:opacity-50">
+                  <X className="h-3.5 w-3.5" /> Clear
+                </button>
+              )}
+            </div>
+          ) : (
+            <p className="rounded-lg border border-dashed border-neutral-300 bg-white px-3 py-2 text-[10px] text-neutral-500">No cover selected. You can save the book without an image.</p>
+          )}
+          {!isSupabaseConfigured && <p className="text-[10px] text-neutral-500">Connect the library storage service to upload a cover image.</p>}
+          {errors.coverImage && <p className="text-[10px] font-semibold text-red-700">{errors.coverImage}</p>}
+        </section>
 
         {/* Section 2: Physical Copies & Shelf Placement */}
         <div className="pt-3 border-t border-neutral-200 space-y-3">

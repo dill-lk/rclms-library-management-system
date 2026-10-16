@@ -36,6 +36,7 @@ import {
   getSupabase,
   getStoredSupabaseConfig,
 } from '../utils/supabaseClient';
+import { discardUnattachedBookCover } from '../utils/bookCovers';
 import { registerCurrentAccountSession } from '../utils/accountSessions';
 import { defaultDesignations, permissionsForRole } from '../utils/roles';
 
@@ -126,7 +127,7 @@ interface LibraryContextType {
   settings: SystemSettings;
 
   // Actions - Books
-  addBook: (book: Omit<Book, 'id' | 'totalBorrows' | 'addedDate' | 'availableCopies'>) => Promise<boolean>;
+  addBook: (book: Omit<Book, 'id' | 'totalBorrows' | 'addedDate' | 'availableCopies'>, uploadedCoverPath?: string) => Promise<boolean>;
   updateBook: (book: Book) => Promise<boolean>;
   deleteBook: (bookId: string) => void;
   restoreBook: (bookId: string) => Promise<boolean>;
@@ -594,7 +595,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         category: b.category_name || '', categoryId: b.category_id || undefined, publisher: b.publisher || '', publisherId: b.publisher_id || undefined,
         isbn: b.isbn || '', ddcCode: b.ddc_code || '', publicationYear: b.publication_year || new Date().getFullYear(), edition: b.edition || '1st Edition',
         language: b.language || 'Sinhala', totalCopies: Number(b.total_copies || 0), availableCopies: Number(b.available_copies || 0), shelfLocation: b.shelf_location || '',
-        section: b.section || '', description: b.description || '', rating: 0, totalBorrows: Number(b.total_borrows || 0), addedDate: b.created_at?.split('T')[0] || '', tags: b.tags || [],
+        section: b.section || '', description: b.description || '', coverImage: b.cover_url || undefined, rating: 0, totalBorrows: Number(b.total_borrows || 0), addedDate: b.created_at?.split('T')[0] || '', tags: b.tags || [],
         copies: (b.book_copies || []).map((c: any) => ({ copyId: c.id, copyNumber: c.copy_number, barcode: c.barcode || c.parigahana_ankaya, status: c.status || 'available', shelfLocation: c.shelf_location || b.shelf_location || '', condition: c.condition || 'new' })),
       })));
       setMembers(memData.map((m: any) => { const stat = memberStats.get(m.id) || { current: 0, total: 0, overdue: 0 }; return { id: m.id, memberId: m.member_id, admissionNo: m.admission_no, name: m.name, type: m.type, grade: m.grade, department: m.department, house: m.house, email: m.email || '', phone: m.phone || '', address: m.address || '', joinedDate: m.joined_date || m.created_at?.split('T')[0] || '', expiryDate: m.expiry_date || '', status: m.status || 'active', maxBorrowLimit: m.max_borrow_limit || 3, currentlyBorrowedCount: stat.current, totalBorrowedCount: stat.total, overdueCount: stat.overdue, unpaidFines: memberFines.get(m.id) || 0 }; }));
@@ -1176,7 +1177,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [currentUser.role, isSupabaseConfigured]);
 
   // Books Actions
-  const addBook = async (bookData: Omit<Book, 'id' | 'totalBorrows' | 'addedDate' | 'availableCopies'>) => {
+  const addBook = async (bookData: Omit<Book, 'id' | 'totalBorrows' | 'addedDate' | 'availableCopies'>, uploadedCoverPath?: string) => {
     const supabase = getSupabase();
     const normalizedAccession = bookData.isbn.trim().toUpperCase();
     const category = categories.find((c) => c.name === bookData.category);
@@ -1246,7 +1247,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         publisher: bookData.publisher || null, publisher_id: publisherId, isbn: bookData.isbn.trim(),
         publication_year: bookData.publicationYear, edition: bookData.edition, language: bookData.language,
         description: bookData.description || null, shelf_location: bookData.shelfLocation || null, section: bookData.section || null,
-        tags: bookData.tags || [], total_copies: 0, available_copies: 0,
+        tags: bookData.tags || [], cover_url: bookData.coverImage || null, total_copies: 0, available_copies: 0,
       };
       const { data, error } = await supabase.rpc('save_catalogue_book_with_copies', {
         p_book: bookRecord,
@@ -1261,6 +1262,11 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
       const result = Array.isArray(data) ? data[0] : data;
       if (!result?.book_id) throw new Error('The database did not confirm the catalogue save. Check the accession number and try again.');
 
+      if (!result.created && uploadedCoverPath) {
+        await discardUnattachedBookCover(uploadedCoverPath);
+        addToast({ type: 'warning', title: 'Cover not attached', message: `Accession number ${bookData.isbn.trim()} already belongs to a catalogue record, so its existing cover was left unchanged.` });
+      }
+
       await refreshAllData();
       if (result.created) {
         addToast({ type: 'success', title: 'Book added', message: `${bookData.title} and ${copies.length} ${copies.length === 1 ? 'copy are' : 'copies are'} now in the catalogue.` });
@@ -1270,6 +1276,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
       }
       return true;
     } catch (err: any) {
+      await discardUnattachedBookCover(uploadedCoverPath);
       addToast({ type: 'error', title: 'Book was not added', message: err?.message || 'Check the category, accession number, and permissions.' });
       return false;
     }
@@ -1290,7 +1297,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
       category_name: updatedBook.category, category_id: category?.id || null, ddc_code: category?.ddcCode || null,
       publisher: updatedBook.publisher || null, publisher_id: publisher?.id || null, isbn: updatedBook.isbn,
       publication_year: updatedBook.publicationYear, edition: updatedBook.edition, language: updatedBook.language,
-      description: updatedBook.description || null, shelf_location: updatedBook.shelfLocation || null, section: updatedBook.section || null, tags: updatedBook.tags || [],
+      description: updatedBook.description || null, shelf_location: updatedBook.shelfLocation || null, section: updatedBook.section || null, tags: updatedBook.tags || [], cover_url: updatedBook.coverImage || null,
     }).eq('id', updatedBook.id);
     if (error) { addToast({ type: 'error', title: 'Book was not updated', message: error.message }); return false; }
     await refreshAllData();
