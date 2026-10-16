@@ -8,13 +8,17 @@ import { SiteAttribution } from '../common/SiteAttribution';
 type PortalSection = 'home' | 'catalogue' | 'account';
 
 export const BorrowerPortal: React.FC = () => {
-  const { books, currentUser, logout, updateOwnProfile } = useLibrary();
+  const { books, currentUser, logout, updateOwnProfile, changeOwnPassword, addToast } = useLibrary();
   const [section, setSection] = useState<PortalSection>('home');
   const [query, setQuery] = useState('');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [accountName, setAccountName] = useState(currentUser.name);
   const [accountPhone, setAccountPhone] = useState(currentUser.phone || '');
   const [savingAccount, setSavingAccount] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
   const isTeacher = currentUser.role === 'teacher';
   const catalogue = useMemo(() => books.filter((book) => !book.isArchived), [books]);
   const featured = useMemo(
@@ -50,6 +54,25 @@ export const BorrowerPortal: React.FC = () => {
       }
     } finally {
       setSavingAccount(false);
+    }
+  };
+
+  const handleChangePassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (newPassword !== confirmPassword) {
+      addToast({ type: 'error', title: 'Passwords do not match', message: 'Enter the same new password twice.' });
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      const result = await changeOwnPassword(currentPassword, newPassword);
+      if (result.success) {
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -183,6 +206,29 @@ export const BorrowerPortal: React.FC = () => {
                 </button>
               </form>
               <p className="mt-5 rounded-2xl bg-[#f7f4ef] p-4 text-xs leading-5 text-slate-600">Your reader login is separate from the official Members Directory. Editing these details does not create or change a library membership record. Your sign-in email, role, and school identifiers are managed separately.</p>
+              <form onSubmit={handleChangePassword} className="mt-8 space-y-4 border-t border-slate-100 pt-6">
+                <div>
+                  <h3 className="text-sm font-bold">Change password</h3>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">Verify your current password first. Other sign-ins will be ended after the change.</p>
+                </div>
+                <label className="block">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Current password</span>
+                  <input type="password" required autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} className="mt-1 w-full rounded-xl border border-[#e7d9c9] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#7d1d39] focus:ring-4 focus:ring-[#7d1d39]/10" />
+                </label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">New password</span>
+                    <input type="password" required minLength={8} maxLength={128} autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className="mt-1 w-full rounded-xl border border-[#e7d9c9] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#7d1d39] focus:ring-4 focus:ring-[#7d1d39]/10" />
+                  </label>
+                  <label className="block">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Confirm new password</span>
+                    <input type="password" required minLength={8} maxLength={128} autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="mt-1 w-full rounded-xl border border-[#e7d9c9] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#7d1d39] focus:ring-4 focus:ring-[#7d1d39]/10" />
+                  </label>
+                </div>
+                <button type="submit" disabled={savingPassword} className="inline-flex items-center gap-2 rounded-xl bg-[#6e1731] px-4 py-3 text-xs font-bold text-white transition hover:bg-[#511125] disabled:cursor-not-allowed disabled:opacity-60">
+                  <Save className="h-4 w-4" /> {savingPassword ? 'Updating…' : 'Update password'}
+                </button>
+              </form>
             </div>
           </section>
         )}

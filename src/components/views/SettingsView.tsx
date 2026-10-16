@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
-import { DeviceSessionsPanel } from './DeviceSessionsPanel';
+import { AccountActivityPanel } from './AccountActivityPanel';
 import { ArchiveManager } from './ArchiveManager';
 import {
   Settings as SettingsIcon,
@@ -277,7 +277,7 @@ export const SettingsView: React.FC = () => {
         </div>
       </form>
 
-      <DeviceSessionsPanel />
+      <AccountActivityPanel />
       <ArchiveManager />
     </div>
   );

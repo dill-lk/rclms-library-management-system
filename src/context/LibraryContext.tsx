@@ -36,7 +36,7 @@ import {
   getSupabase,
   getStoredSupabaseConfig,
 } from '../utils/supabaseClient';
-import { registerCurrentDeviceSession } from '../utils/deviceSessions';
+import { registerCurrentAccountSession } from '../utils/accountSessions';
 import { defaultDesignations, permissionsForRole } from '../utils/roles';
 
 export interface ToastMessage {
@@ -98,6 +98,9 @@ interface LibraryContextType {
   addUser: (user: Omit<UserAccount, 'id'>) => void;
   updateUserRole: (userId: string, role: UserAccount['role']) => Promise<{ success: boolean; message: string }>;
   updateOwnProfile: (profileData: { name: string; phone?: string }) => Promise<{ success: boolean; message: string; user?: UserAccount }>;
+  changeOwnPassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
+  setAccountPassword: (userId: string, password: string) => Promise<{ success: boolean; message: string }>;
+  updateUserStatus: (userId: string, status: 'active' | 'suspended') => Promise<{ success: boolean; message: string }>;
   isLoggedIn: boolean;
   login: (user: UserAccount) => void;
   loginWithCredentials: (email: string, password: string, audience?: 'borrower' | 'staff') => Promise<{ success: boolean; message: string; user?: UserAccount }>;
@@ -684,6 +687,58 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     return { success: true, message: 'Profile updated.', user: updatedUser };
   };
 
+  const changeOwnPassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+    const supabase = getSupabase();
+    const fail = (message: string) => {
+      addToast({ type: 'error', title: 'Password was not changed', message });
+      return { success: false, message };
+    };
+    if (!supabase || !currentUser.id || !currentUser.email) {
+      return fail('Your signed-in account could not be verified. Sign in again and retry.');
+    }
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      return fail('Choose a password between 8 and 128 characters.');
+    }
+    if (!currentPassword || currentPassword === newPassword) {
+      return fail('Enter your current password and choose a different new password.');
+    }
+
+    try {
+      // Re-authenticate with the current credential so Supabase treats this as a recent sign-in.
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email: currentUser.email,
+        password: currentPassword,
+      });
+      if (reauthError) return fail('Your current password could not be verified.');
+
+      const reauthenticatedSession = await registerCurrentAccountSession();
+      if (reauthenticatedSession.status !== 'active') {
+        return fail('Your verified sign-in could not be recorded. Sign out and back in, then try again.');
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateError) return fail(updateError.message || 'The new password was rejected.');
+
+      const registration = await registerCurrentAccountSession();
+      let sessionCleanupMessage = '';
+      if (registration.status === 'active') {
+        const { error: cleanupError } = await supabase.rpc('sign_out_other_library_account_sessions');
+        if (cleanupError) sessionCleanupMessage = ' The password changed, but other sign-ins could not be ended.';
+      } else {
+        sessionCleanupMessage = ' The password changed, but other sign-ins could not be confirmed as ended.';
+      }
+      await writeAuditEvent('own_password_changed', 'profiles', currentUser.id, { otherSessionsEnded: !sessionCleanupMessage });
+      addToast({
+        type: sessionCleanupMessage ? 'warning' : 'success',
+        title: 'Password updated',
+        message: `Your password was changed.${sessionCleanupMessage || ' Other sign-ins were ended.'}`,
+      });
+      return { success: true, message: 'Your password was changed.' };
+    } catch (error: any) {
+      return fail(error?.message || 'The password could not be changed. Try again.');
+    }
+  };
+
   const loginWithCredentials = async (email: string, pass: string, audience?: 'borrower' | 'staff'): Promise<{ success: boolean; message: string; user?: UserAccount }> => {
     const cleanEmail = email.trim().toLowerCase();
     const supabase = getSupabase();
@@ -769,12 +824,12 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
 
           // Reader sign-in is profile-based. Official Members rows are created only by staff;
           // an authenticated reader can sign in even when no membership record exists.
-          const deviceSession = await registerCurrentDeviceSession();
-          if (deviceSession.error || deviceSession.status !== 'active') {
+          const accountSession = await registerCurrentAccountSession();
+          if (accountSession.error || accountSession.status !== 'active') {
             await supabase.auth.signOut({ scope: 'local' });
             return {
               success: false,
-              message: deviceSession.error || `This sign-in session is ${deviceSession.status}. Contact an administrator if access should be restored.`,
+              message: accountSession.error || `This account sign-in is ${accountSession.status}. Contact an administrator if access should be restored.`,
             };
           }
 
@@ -911,7 +966,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     if (supabase) {
       void (async () => {
         try {
-          await supabase.rpc('end_library_device_session');
+          await supabase.rpc('end_library_account_session');
         } catch {
           // Local Auth sign-out must still complete when the session RPC is offline.
         }
@@ -998,6 +1053,59 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role, permissions: permissionsForRole(role) } : u)));
     addToast({ type: 'success', title: 'Role updated', message: 'The staff member’s access has been updated.' });
     return { success: true, message: 'Role updated.' };
+  };
+
+  const setAccountPassword = async (userId: string, password: string): Promise<{ success: boolean; message: string }> => {
+    const fail = (message: string) => {
+      addToast({ type: 'error', title: 'Password was not changed', message });
+      return { success: false, message };
+    };
+    if (currentUser.role !== 'super_admin' || userId === currentUser.id) {
+      return fail('Only the super administrator can reset another account’s password. Use My Account for your own password.');
+    }
+    if (password.length < 8 || password.length > 128) return fail('Choose a password between 8 and 128 characters.');
+    const supabase = getSupabase();
+    if (!supabase || !isSupabaseConfigured) return fail('Secure account management is unavailable until Supabase is connected.');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-library-account', {
+        body: { action: 'set_password', targetUserId: userId, password },
+      });
+      if (error || data?.success !== true) return fail(data?.message || error?.message || 'The account password could not be changed.');
+      const message = data.message || 'The account password was changed and prior sign-ins were ended.';
+      addToast({ type: 'success', title: 'Account password changed', message });
+      return { success: true, message };
+    } catch (error: any) {
+      return fail(error?.message || 'The account password could not be changed. Try again.');
+    }
+  };
+
+  const updateUserStatus = async (userId: string, status: 'active' | 'suspended'): Promise<{ success: boolean; message: string }> => {
+    const fail = (message: string) => {
+      addToast({ type: 'error', title: 'Account status was not changed', message });
+      return { success: false, message };
+    };
+    const target = users.find((user) => user.id === userId);
+    if (currentUser.role !== 'super_admin' || userId === currentUser.id) {
+      return fail('Only the super administrator can change another account’s status. The main administrator account is protected.');
+    }
+    if (target?.role === 'super_admin') return fail('Super administrator accounts are protected from suspension.');
+    if (target?.status === 'pending') return fail('Pending staff requests must be handled through the approval workflow.');
+    const supabase = getSupabase();
+    if (!supabase || !isSupabaseConfigured) return fail('Secure account management is unavailable until Supabase is connected.');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-library-account', {
+        body: { action: 'set_status', targetUserId: userId, status },
+      });
+      if (error || data?.success !== true) return fail(data?.message || error?.message || 'The account status could not be changed.');
+      setUsers((previous) => previous.map((user) => user.id === userId ? { ...user, status } : user));
+      const message = data.message || `The account is now ${status}.`;
+      addToast({ type: 'success', title: status === 'suspended' ? 'Account suspended' : 'Account reactivated', message });
+      return { success: true, message };
+    } catch (error: any) {
+      return fail(error?.message || 'The account status could not be changed. Try again.');
+    }
   };
 
   // Books Actions
@@ -2507,7 +2615,10 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         users,
         addUser,
         updateUserRole,
+        setAccountPassword,
+        updateUserStatus,
         updateOwnProfile,
+        changeOwnPassword,
         isLoggedIn,
         login,
         loginWithCredentials,

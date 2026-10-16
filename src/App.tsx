@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { useLibrary } from './context/LibraryContext';
-import { heartbeatCurrentDeviceSession, registerCurrentDeviceSession } from './utils/deviceSessions';
+import { heartbeatCurrentAccountSession, registerCurrentAccountSession } from './utils/accountSessions';
 import { Header } from './components/common/Header';
 import { Sidebar } from './components/common/Sidebar';
 import { ToastContainer } from './components/common/ToastContainer';
@@ -44,22 +44,22 @@ export const AppContent: React.FC = () => {
     if (!isLoggedIn) return;
     let mounted = true;
     let checking = false;
-    let registeredDevice = false;
+    let registeredAccountSession = false;
     const checkSession = async () => {
       if (checking) return;
       checking = true;
       try {
-        if (!registeredDevice) {
-          const registration = await registerCurrentDeviceSession();
+        if (!registeredAccountSession) {
+          const registration = await registerCurrentAccountSession();
           if (!mounted) return;
-          registeredDevice = registration.status === 'active';
+          registeredAccountSession = registration.status === 'active';
         }
-        const { status } = await heartbeatCurrentDeviceSession();
+        const { status } = await heartbeatCurrentAccountSession();
         if (!mounted || !status || status === 'active' || status === 'untracked' || status === 'unavailable') return;
         const reason = status === 'paused'
-          ? 'This device session was paused by an administrator.'
+          ? 'This account sign-in was paused by an administrator.'
           : status === 'blocked'
-            ? 'This device session was blocked by an administrator.'
+            ? 'This account sign-in was blocked by an administrator.'
             : status === 'account_inactive'
               ? 'This library account is inactive.'
               : 'This sign-in session has ended.';

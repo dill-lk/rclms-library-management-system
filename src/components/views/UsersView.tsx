@@ -13,12 +13,15 @@ import {
   X,
   User,
   Key,
+  KeyRound,
+  Ban,
+  RotateCcw,
   Lock,
   Sparkles
 } from 'lucide-react';
 
 export const UsersView: React.FC = () => {
-  const { users, addUser, updateUserRole, currentUser, addToast, isSupabaseConfigured } = useLibrary();
+  const { users, addUser, updateUserRole, setAccountPassword, updateUserStatus, currentUser, addToast, isSupabaseConfigured } = useLibrary();
 
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [userName, setUserName] = useState('');
@@ -26,12 +29,57 @@ export const UsersView: React.FC = () => {
   const [userRole, setUserRole] = useState<UserRole>('assistant_librarian');
   const [userDesignation, setUserDesignation] = useState('');
   const [approvalRoles, setApprovalRoles] = useState<Record<string, 'librarian' | 'assistant_librarian'>>({});
+  const [passwordTarget, setPasswordTarget] = useState<UserAccount | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [pendingAccountAction, setPendingAccountAction] = useState<string | null>(null);
   const isSuperAdmin = currentUser.role === 'super_admin';
   const pendingRequests = users.filter((user) => user.status === 'pending');
 
   const handleApproveRequest = async (user: UserAccount) => {
     const role = approvalRoles[user.id] || 'assistant_librarian';
     await updateUserRole(user.id, role);
+  };
+
+  const closePasswordModal = () => {
+    setPasswordTarget(null);
+    setNewPassword('');
+    setConfirmNewPassword('');
+  };
+
+  const handleSetPassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!passwordTarget) return;
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      addToast({ type: 'error', title: 'Password is too short or long', message: 'Choose a password between 8 and 128 characters.' });
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      addToast({ type: 'error', title: 'Passwords do not match', message: 'Enter the same new password twice.' });
+      return;
+    }
+    setPendingAccountAction(passwordTarget.id);
+    try {
+      const result = await setAccountPassword(passwordTarget.id, newPassword);
+      if (result.success) closePasswordModal();
+    } finally {
+      setPendingAccountAction(null);
+    }
+  };
+
+  const handleToggleAccountStatus = async (user: UserAccount) => {
+    const status = user.status === 'active' ? 'suspended' : 'active';
+    const action = status === 'suspended' ? 'suspend' : 'reactivate';
+    const description = status === 'suspended'
+      ? 'They will be blocked from signing in, and their active library sign-ins will be ended. You can reactivate this account later.'
+      : 'The account will be allowed to sign in again. The user must sign in again; previous sessions will remain ended.';
+    if (!window.confirm(`Are you sure you want to ${action} ${user.email}?\n\n${description}`)) return;
+    setPendingAccountAction(user.id);
+    try {
+      await updateUserStatus(user.id, status);
+    } finally {
+      setPendingAccountAction(null);
+    }
   };
 
   const handleCreateUser = (e: React.FormEvent) => {
@@ -70,7 +118,7 @@ export const UsersView: React.FC = () => {
             <span>Accounts and access</span>
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Access role determines the account’s permission category; designation or department is descriptive only.
+            Manage staff and reader accounts by their sign-in identity. Access role determines permissions; designation or department is descriptive only.
           </p>
         </div>
 
@@ -96,7 +144,7 @@ export const UsersView: React.FC = () => {
           <h3 className="text-sm font-bold font-heading text-gray-900 dark:text-white">
             User accounts ({users.length})
           </h3>
-          <span className="text-xs text-gray-400 font-mono">Staff list</span>
+          <span className="text-xs text-gray-400 font-mono">Sign-in accounts</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -110,6 +158,7 @@ export const UsersView: React.FC = () => {
                 <th className="py-3 px-3">Last Active</th>
                 <th className="py-3 px-3">Status</th>
                 <th className="py-3 px-4 text-right">Review / change role</th>
+                <th className="py-3 px-4 text-right">Account safety</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-slate-800 text-gray-800 dark:text-gray-200">
@@ -118,7 +167,7 @@ export const UsersView: React.FC = () => {
                   <td className="py-3 px-4 font-bold">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-7 h-7 rounded-full bg-maroon-800 text-gold-300 font-bold flex items-center justify-center text-xs flex-shrink-0">
-                        {u.name[0]}
+                        {(u.name || u.email || 'U')[0].toUpperCase()}
                       </div>
                       <span className="truncate">{u.name || 'Library user'}</span>
                     </div>
@@ -177,6 +226,33 @@ export const UsersView: React.FC = () => {
                       </select>
                     ) : (
                       <span className="text-[11px] text-gray-400">{isSuperAdmin ? 'Protected account' : 'Super administrator only'}</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    {isSuperAdmin && u.role !== 'super_admin' && u.status !== 'pending' ? (
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          disabled={pendingAccountAction === u.id || !isSupabaseConfigured}
+                          onClick={() => setPasswordTarget(u)}
+                          aria-label={`Reset password for ${u.email}`}
+                          className="inline-flex min-h-8 items-center gap-1.5 border border-gray-200 dark:border-slate-700 px-2.5 text-[11px] font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50"
+                        >
+                          <KeyRound className="h-3.5 w-3.5" /> Set password
+                        </button>
+                        <button
+                          type="button"
+                          disabled={pendingAccountAction === u.id || !isSupabaseConfigured}
+                          onClick={() => void handleToggleAccountStatus(u)}
+                          aria-label={`${u.status === 'active' ? 'Suspend' : 'Reactivate'} ${u.email}`}
+                          className={`inline-flex min-h-8 items-center gap-1.5 border px-2.5 text-[11px] font-semibold disabled:opacity-50 ${u.status === 'active' ? 'border-red-200 text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:text-red-300' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/60 dark:text-emerald-300'}`}
+                        >
+                          {u.status === 'active' ? <Ban className="h-3.5 w-3.5" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                          {u.status === 'active' ? 'Suspend' : 'Reactivate'}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-[11px] text-gray-400">{isSuperAdmin ? (u.status === 'pending' ? 'Approve request first' : 'Protected account') : 'Super administrator only'}</span>
                     )}
                   </td>
                 </tr>
@@ -247,6 +323,34 @@ export const UsersView: React.FC = () => {
           </table>
         </div>
       </div>
+
+      <Modal
+        isOpen={Boolean(passwordTarget)}
+        onClose={closePasswordModal}
+        title="Set account password"
+        subtitle={passwordTarget ? `Reset sign-in password for ${passwordTarget.email}.` : undefined}
+        size="md"
+      >
+        <form onSubmit={handleSetPassword} className="space-y-4 text-xs">
+          <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 leading-5 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+            This changes the sign-in password immediately and ends the account’s active library sessions. Share the new password with the account owner securely.
+          </p>
+          <label className="block">
+            <span className="mb-1 block font-bold text-gray-700 dark:text-gray-300">New password</span>
+            <input type="password" required minLength={8} maxLength={128} autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block font-bold text-gray-700 dark:text-gray-300">Confirm new password</span>
+            <input type="password" required minLength={8} maxLength={128} autoComplete="new-password" value={confirmNewPassword} onChange={(event) => setConfirmNewPassword(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
+          </label>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={closePasswordModal} className="rounded-xl border border-gray-200 px-4 py-2 font-semibold text-gray-600 hover:bg-gray-50 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-800">Cancel</button>
+            <button type="submit" disabled={Boolean(pendingAccountAction) || !isSupabaseConfigured} className="rounded-xl bg-maroon-800 px-4 py-2 font-bold text-white hover:bg-maroon-900 disabled:opacity-50">
+              {pendingAccountAction === passwordTarget?.id ? 'Saving…' : 'Change password'}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Add User Modal */}
       <Modal
