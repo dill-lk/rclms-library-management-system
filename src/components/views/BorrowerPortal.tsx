@@ -4,6 +4,7 @@ import type { Book } from '../../types';
 import { useLibrary } from '../../context/LibraryContext';
 import { ToastContainer } from '../common/ToastContainer';
 import { SiteAttribution } from '../common/SiteAttribution';
+import { UserAvatar } from '../common/UserAvatar';
 
 type PortalSection = 'home' | 'catalogue' | 'account';
 
@@ -100,6 +101,12 @@ export const BorrowerPortal: React.FC = () => {
             <PortalNavButton active={section === 'account'} onClick={() => navigate('account')}>My account</PortalNavButton>
           </nav>
           <div className="flex items-center gap-2">
+            <UserAvatar
+              accountId={currentUser.id}
+              accountName={currentUser.name}
+              avatarPath={currentUser.avatar}
+              className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f6e9df] text-xs font-bold text-[#6e1731]"
+            />
             <div className="hidden text-right md:block">
               <p className="max-w-36 truncate text-xs font-semibold">{currentUser.name}</p>
               <p className="text-[10px] capitalize text-slate-500">{currentUser.role}</p>
@@ -177,9 +184,12 @@ export const BorrowerPortal: React.FC = () => {
             <h1 className="mt-1 text-2xl font-bold">My account</h1>
             <div className="mt-6 rounded-3xl border border-[#e7d9c9] bg-white p-6 shadow-sm sm:p-8">
               <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f6e9df] text-lg font-bold text-[#6e1731]">
-                  {currentUser.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()}
-                </div>
+                <UserAvatar
+                  accountId={currentUser.id}
+                  accountName={currentUser.name}
+                  avatarPath={currentUser.avatar}
+                  className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#f6e9df] text-lg font-bold text-[#6e1731]"
+                />
                 <div>
                   <h2 className="text-lg font-bold">{currentUser.name}</h2>
                   <span className="mt-1 inline-flex rounded-full bg-[#f6e9df] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#6e1731]">{isTeacher ? 'Teacher' : 'Student'}</span>

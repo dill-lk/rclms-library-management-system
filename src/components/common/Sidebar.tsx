@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { CollegeCrest } from './CollegeCrest';
+import { UserAvatar } from './UserAvatar';
 import { ActiveNavTab } from '../../types';
 import {
   LayoutDashboard,
@@ -240,9 +241,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               onClick={() => handleNavClick('profile')}
               className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 min-w-0"
             >
-              <div className="w-8 h-8 rounded-full bg-maroon-700 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
-                {currentUser.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
-              </div>
+              <UserAvatar
+                accountId={currentUser.id}
+                accountName={currentUser.name}
+                avatarPath={currentUser.avatar}
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-maroon-700 text-xs font-bold text-white"
+              />
               <div className="truncate text-left">
                 <p className="text-xs font-semibold text-neutral-900 truncate">
                   {currentUser.name.split(' ')[0]} {currentUser.name.split(' ')[1] || ''}

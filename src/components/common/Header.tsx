@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { CollegeCrest } from './CollegeCrest';
+import { UserAvatar } from './UserAvatar';
 import {
   Search,
   Bell,
@@ -279,9 +280,12 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center gap-2 p-1 pl-1.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-700 to-cyan-700 text-white flex items-center justify-center font-bold text-xs ring-1 ring-cyan-300/60">
-                {currentUser.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
-              </div>
+              <UserAvatar
+                accountId={currentUser.id}
+                accountName={currentUser.name}
+                avatarPath={currentUser.avatar}
+                className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gradient-to-tr from-indigo-700 to-cyan-700 text-xs font-bold text-white ring-1 ring-cyan-300/60"
+              />
               <div className="text-left hidden md:block">
                 <div className="text-xs font-bold text-neutral-900 dark:text-white leading-tight truncate max-w-[120px]">
                   {currentUser.name.split(' ')[0]}

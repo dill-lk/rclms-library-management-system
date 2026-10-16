@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { StatusBadge } from '../common/StatusBadge';
+import { invalidateOwnProfileAvatarUrl, UserAvatar } from '../common/UserAvatar';
 import { getSupabase } from '../../utils/supabaseClient';
 import {
   User,
@@ -16,8 +17,6 @@ import {
 const PROFILE_PICTURE_BUCKET = 'staff-profile-pictures';
 const MAX_PROFILE_PICTURE_BYTES = 2 * 1024 * 1024;
 const PROFILE_PICTURE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const PROFILE_PICTURE_SIGNED_URL_SECONDS = 15 * 60;
-const PROFILE_PICTURE_REFRESH_MS = 10 * 60 * 1000;
 
 export const ProfileView: React.FC = () => {
   const { currentUser, addToast, logout, setActiveTab, updateOwnProfile, updateOwnAvatar, changeOwnPassword, isSupabaseConfigured } = useLibrary();
@@ -27,7 +26,7 @@ export const ProfileView: React.FC = () => {
   const [confirmPass, setConfirmPass] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState('');
-  const [profilePictureUrl, setProfilePictureUrl] = useState('');
+  const [avatarRefreshToken, setAvatarRefreshToken] = useState(0);
   const [savingAvatar, setSavingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -37,36 +36,6 @@ export const ProfileView: React.FC = () => {
   const [savingPassword, setSavingPassword] = useState(false);
   const canManageProfilePicture = currentUser.status === 'active'
     && ['super_admin', 'librarian', 'assistant_librarian', 'staff'].includes(currentUser.role);
-
-  useEffect(() => {
-    let cancelled = false;
-    const refreshProfilePicture = async () => {
-      const avatar = currentUser.avatar;
-      if (!avatar) {
-        setProfilePictureUrl('');
-        return;
-      }
-      if (avatar !== `${currentUser.id}/profile-picture`) {
-        setProfilePictureUrl(avatar);
-        return;
-      }
-      const supabase = getSupabase();
-      if (!supabase) {
-        setProfilePictureUrl('');
-        return;
-      }
-      const { data, error } = await supabase.storage.from(PROFILE_PICTURE_BUCKET).createSignedUrl(avatar, PROFILE_PICTURE_SIGNED_URL_SECONDS);
-      if (!cancelled) setProfilePictureUrl(error ? '' : data?.signedUrl || '');
-    };
-    void refreshProfilePicture();
-    const interval = window.setInterval(() => void refreshProfilePicture(), PROFILE_PICTURE_REFRESH_MS);
-    window.addEventListener('focus', refreshProfilePicture);
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-      window.removeEventListener('focus', refreshProfilePicture);
-    };
-  }, [currentUser.avatar, currentUser.id]);
 
   useEffect(() => () => {
     if (avatarPreview) URL.revokeObjectURL(avatarPreview);
@@ -127,8 +96,8 @@ export const ProfileView: React.FC = () => {
 
       const result = await updateOwnAvatar(avatarPath);
       if (!result.success) return;
-      const { data: signedUrlData } = await supabase.storage.from(PROFILE_PICTURE_BUCKET).createSignedUrl(avatarPath, PROFILE_PICTURE_SIGNED_URL_SECONDS);
-      if (signedUrlData?.signedUrl) setProfilePictureUrl(signedUrlData.signedUrl);
+      invalidateOwnProfileAvatarUrl(avatarPath);
+      setAvatarRefreshToken((token) => token + 1);
       setAvatarFile(null);
       setAvatarPreview('');
       if (avatarInputRef.current) avatarInputRef.current.value = '';
@@ -186,18 +155,14 @@ export const ProfileView: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 overflow-hidden rounded-2xl bg-gradient-to-tr from-maroon-900 via-maroon-800 to-maroon-700 text-gold-300 border-2 border-gold-400 font-bold text-2xl flex items-center justify-center shadow-md flex-shrink-0">
-              {avatarPreview || profilePictureUrl ? (
-                <img
-                  src={avatarPreview || profilePictureUrl}
-                  alt={`${currentUser.name} profile picture`}
-                  className="h-full w-full object-cover"
-                  onError={() => setProfilePictureUrl('')}
-                />
-              ) : (
-                currentUser.name.split(' ').map((n) => n[0]).slice(0, 2).join('')
-              )}
-            </div>
+            <UserAvatar
+              accountId={currentUser.id}
+              accountName={currentUser.name}
+              avatarPath={currentUser.avatar}
+              srcOverride={avatarPreview || undefined}
+              refreshToken={avatarRefreshToken}
+              className="flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-gold-400 bg-gradient-to-tr from-maroon-900 via-maroon-800 to-maroon-700 text-2xl font-bold text-gold-300 shadow-md"
+            />
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl sm:text-2xl font-bold font-heading text-gray-900 dark:text-white">

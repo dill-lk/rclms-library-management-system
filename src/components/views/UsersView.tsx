@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLibrary } from '../../context/LibraryContext';
 import { StatusBadge } from '../common/StatusBadge';
 import { Modal } from '../common/Modal';
+import { UserAvatar } from '../common/UserAvatar';
 import { UserAccount, UserRole } from '../../types';
 import { libraryPermissions, permissionsForRole, roleLabels, rolePermissions } from '../../utils/roles';
 import {
@@ -21,7 +22,7 @@ import {
 } from 'lucide-react';
 
 export const UsersView: React.FC = () => {
-  const { users, addUser, updateUserRole, setAccountPassword, updateUserStatus, currentUser, addToast, isSupabaseConfigured } = useLibrary();
+  const { users, addUser, updateUserRole, setAccountPassword, updateUserStatus, getAccountAvatarUrls, currentUser, addToast, isSupabaseConfigured } = useLibrary();
 
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [userName, setUserName] = useState('');
@@ -33,8 +34,31 @@ export const UsersView: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [pendingAccountAction, setPendingAccountAction] = useState<string | null>(null);
+  const [accountAvatarUrls, setAccountAvatarUrls] = useState<Record<string, string>>({});
   const isSuperAdmin = currentUser.role === 'super_admin';
   const pendingRequests = users.filter((user) => user.status === 'pending');
+  const accountIdsKey = users.map((user) => user.id).filter(Boolean).sort().join(',');
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isSuperAdmin || !isSupabaseConfigured || !accountIdsKey) {
+      setAccountAvatarUrls({});
+      return;
+    }
+    const userIds = accountIdsKey.split(',');
+    const refresh = async () => {
+      const urls = await getAccountAvatarUrls(userIds);
+      if (!cancelled) setAccountAvatarUrls(urls);
+    };
+    void refresh();
+    const interval = window.setInterval(() => void refresh(), 10 * 60 * 1000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [accountIdsKey, getAccountAvatarUrls, isSuperAdmin, isSupabaseConfigured]);
 
   const handleApproveRequest = async (user: UserAccount) => {
     const role = approvalRoles[user.id] || 'assistant_librarian';
@@ -166,9 +190,14 @@ export const UsersView: React.FC = () => {
                 <tr key={u.id} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/40 transition">
                   <td className="py-3 px-4 font-bold">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-7 h-7 rounded-full bg-maroon-800 text-gold-300 font-bold flex items-center justify-center text-xs flex-shrink-0">
-                        {(u.name || u.email || 'U')[0].toUpperCase()}
-                      </div>
+                      <UserAvatar
+                        accountId={u.id}
+                        accountName={u.name || u.email || 'Library user'}
+                        avatarPath={u.id === currentUser.id ? currentUser.avatar : undefined}
+                        signedUrl={accountAvatarUrls[u.id]}
+                        className="flex h-7 w-7 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-maroon-800 text-xs font-bold text-gold-300"
+                        fallback={<span>{(u.name || u.email || 'U')[0].toUpperCase()}</span>}
+                      />
                       <span className="truncate">{u.name || 'Library user'}</span>
                     </div>
                   </td>

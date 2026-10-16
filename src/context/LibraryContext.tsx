@@ -102,6 +102,7 @@ interface LibraryContextType {
   changeOwnPassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   setAccountPassword: (userId: string, password: string) => Promise<{ success: boolean; message: string }>;
   updateUserStatus: (userId: string, status: 'active' | 'suspended') => Promise<{ success: boolean; message: string }>;
+  getAccountAvatarUrls: (userIds: string[]) => Promise<Record<string, string>>;
   isLoggedIn: boolean;
   login: (user: UserAccount) => void;
   loginWithCredentials: (email: string, password: string, audience?: 'borrower' | 'staff') => Promise<{ success: boolean; message: string; user?: UserAccount }>;
@@ -714,7 +715,6 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       const updatedUser: UserAccount = { ...currentUser, avatar: data.avatar_url || undefined };
       setCurrentUser(updatedUser);
-      setUsers((previous) => previous.map((user) => user.id === updatedUser.id ? { ...user, avatar: updatedUser.avatar } : user));
       addToast({ type: 'success', title: 'Profile picture saved', message: 'Your private profile picture is now updated.' });
       return { success: true, message: 'Profile picture saved.', user: updatedUser };
     } catch (error: any) {
@@ -1143,6 +1143,37 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
       return fail(error?.message || 'The account status could not be changed. Try again.');
     }
   };
+
+  const getAccountAvatarUrls = useCallback(async (userIds: string[]): Promise<Record<string, string>> => {
+    if (currentUser.role !== 'super_admin' || !isSupabaseConfigured || !Array.isArray(userIds)) return {};
+    const validIds = [...new Set(userIds.filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)))].slice(0, 100);
+    if (!validIds.length) return {};
+    const supabase = getSupabase();
+    if (!supabase) return {};
+
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-library-account', {
+        body: { action: 'get_profile_picture_urls', userIds: validIds },
+      });
+      if (error || data?.success !== true || !data.avatarUrls || typeof data.avatarUrls !== 'object') return {};
+      const allowed = new Set(validIds);
+      const safeUrls: Record<string, string> = {};
+      for (const [userId, value] of Object.entries(data.avatarUrls as Record<string, unknown>)) {
+        if (!allowed.has(userId) || typeof value !== 'string') continue;
+        try {
+          const url = new URL(value);
+          if (url.protocol === 'https:' && url.pathname.includes('/storage/v1/object/sign/staff-profile-pictures/')) {
+            safeUrls[userId] = value;
+          }
+        } catch {
+          // Ignore an invalid value and keep the existing initials/icon fallback.
+        }
+      }
+      return safeUrls;
+    } catch {
+      return {};
+    }
+  }, [currentUser.role, isSupabaseConfigured]);
 
   // Books Actions
   const addBook = async (bookData: Omit<Book, 'id' | 'totalBorrows' | 'addedDate' | 'availableCopies'>) => {
@@ -2653,6 +2684,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         updateUserRole,
         setAccountPassword,
         updateUserStatus,
+        getAccountAvatarUrls,
         updateOwnProfile,
         updateOwnAvatar,
         changeOwnPassword,

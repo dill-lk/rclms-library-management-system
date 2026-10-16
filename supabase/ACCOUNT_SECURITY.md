@@ -8,7 +8,8 @@
 - Staff and readers change their own password from their account page after verifying the current password.
 - The active super administrator can reset another non-pending account's password, pause/suspend it, and reactivate it. Password resets attempt to end existing library sign-ins; suspension refuses the status change if session cleanup fails, then bans the account at Supabase Auth until reactivated.
 - Account-management actions are authorized by the Edge Function using the signed-in account's active `super_admin` profile. Profile RLS and its trigger also prevent librarians from changing other accounts directly. The service-role key remains server-only.
-- Staff can upload a JPEG, PNG, or WebP profile picture up to 2 MB. Pictures are stored in a private bucket at a fixed per-user path; storage RLS restricts upload, replacement, and signed reads to that account's active library sign-in. The profile page refreshes 15-minute signed URLs every 10 minutes; a signed link remains usable by whoever holds it until it expires.
+- Staff can upload a JPEG, PNG, or WebP profile picture up to 2 MB. Pictures are stored in a private bucket at a fixed per-user path; storage RLS restricts uploads and replacements to that account's active library sign-in. The owner signs their own image directly under RLS. Account/activity lists request 15-minute signed URLs through the JWT-verified Edge Function, which requires an active super-admin session, checks exact user-owned paths, and returns URLs only (never the object paths or service-role key). The UI refreshes signed URLs every 10 minutes; a signed link remains usable by whoever holds it until it expires.
+- The app uses an 80% CSS zoom at desktop widths (1024px and above), keeps tablet/mobile at native scale, and resets print output to 100%; it does not change browser-wide zoom.
 
 ## Rollout order
 
@@ -26,4 +27,5 @@ No password, profile status, or existing account was changed as part of preparin
 - [Auth JS `AdminUserAttributes`](https://supabase.github.io/auth-js/v2/interfaces/AdminUserAttributes.html) — `ban_duration` accepts duration strings with `ns`, `us`/`µs`, `ms`, `s`, `m`, or `h`; `'none'` lifts a ban. This implementation uses `876000h` (100 years) for suspension and `'none'` for reactivation.
 - [Storage access control](https://supabase.com/docs/guides/storage/security/access-control) — private object access is controlled with policies on `storage.objects`.
 - [Storage downloads and signed URLs](https://supabase.com/docs/guides/storage/serving/downloads) — private objects can be served through expiring signed URLs.
+- [Storage JS `createSignedUrls`](https://supabase.com/docs/reference/javascript/storage-from-createsignedurls) — batch-creates scoped, expiring URLs for explicit object paths; the Edge Function validates each account-owned path before returning only the signed URLs to an active super-admin.
 - Storage upserts require `SELECT` and `UPDATE` policies in addition to `INSERT`; the private-avatar policies scope all three operations to the exact account-owned path.

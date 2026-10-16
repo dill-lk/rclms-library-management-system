@@ -6,6 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+const PROFILE_PICTURE_BUCKET = "staff-profile-pictures";
+const PROFILE_PICTURE_SIGNED_URL_SECONDS = 15 * 60;
+const MAX_PROFILE_PICTURE_USERS = 100;
 
 const jsonResponse = (body: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -33,21 +36,31 @@ Deno.serve(async (request: Request) => {
   }
 
   const action = payload.action;
-  const targetUserId = typeof payload.targetUserId === "string" ? payload.targetUserId : "";
-  if (!isUuid(targetUserId)) {
-    return jsonResponse({ success: false, message: "The selected account could not be verified." }, 400);
-  }
-  if (action !== "set_password" && action !== "set_status") {
+  if (action !== "set_password" && action !== "set_status" && action !== "get_profile_picture_urls") {
     return jsonResponse({ success: false, message: "Choose a supported account action." }, 400);
   }
-  if (action === "set_password") {
-    const password = typeof payload.password === "string" ? payload.password : "";
-    if (password.length < 8 || password.length > 128) {
-      return jsonResponse({ success: false, message: "Passwords must be between 8 and 128 characters." }, 400);
+  let targetUserId = "";
+  let avatarUserIds: string[] = [];
+  if (action === "get_profile_picture_urls") {
+    const requestedIds = Array.isArray(payload.userIds) ? payload.userIds : null;
+    if (!requestedIds || requestedIds.length > MAX_PROFILE_PICTURE_USERS || requestedIds.some((id: unknown) => typeof id !== "string" || !isUuid(id))) {
+      return jsonResponse({ success: false, message: "The requested account list could not be verified." }, 400);
     }
-  }
-  if (action === "set_status" && payload.status !== "active" && payload.status !== "suspended") {
-    return jsonResponse({ success: false, message: "Choose Active or Suspended for this account." }, 400);
+    avatarUserIds = [...new Set(requestedIds as string[])];
+  } else {
+    targetUserId = typeof payload.targetUserId === "string" ? payload.targetUserId : "";
+    if (!isUuid(targetUserId)) {
+      return jsonResponse({ success: false, message: "The selected account could not be verified." }, 400);
+    }
+    if (action === "set_password") {
+      const password = typeof payload.password === "string" ? payload.password : "";
+      if (password.length < 8 || password.length > 128) {
+        return jsonResponse({ success: false, message: "Passwords must be between 8 and 128 characters." }, 400);
+      }
+    }
+    if (action === "set_status" && payload.status !== "active" && payload.status !== "suspended") {
+      return jsonResponse({ success: false, message: "Choose Active or Suspended for this account." }, 400);
+    }
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -81,6 +94,38 @@ Deno.serve(async (request: Request) => {
   const { data: sessionIsActive, error: sessionError } = await userClient.rpc("is_library_session_active");
   if (sessionError || sessionIsActive !== true) {
     return jsonResponse({ success: false, message: "This administrator sign-in session is not active." }, 403);
+  }
+  if (action === "get_profile_picture_urls") {
+    if (avatarUserIds.length === 0) return jsonResponse({ success: true, avatarUrls: {}, expiresInSeconds: PROFILE_PICTURE_SIGNED_URL_SECONDS });
+    const { data: profiles, error: profilesError } = await admin
+      .from("profiles")
+      .select("id, role, avatar_url")
+      .in("id", avatarUserIds);
+    if (profilesError) {
+      console.error("Could not resolve account profile-picture rows:", profilesError.message);
+      return jsonResponse({ success: false, message: "Profile pictures are unavailable right now." }, 503);
+    }
+    const staffRoles = new Set(["super_admin", "librarian", "assistant_librarian", "staff"]);
+    const avatarProfiles = (profiles || []).filter((profile) =>
+      staffRoles.has(profile.role) && profile.avatar_url === `${profile.id}/profile-picture`
+    );
+    if (avatarProfiles.length === 0) return jsonResponse({ success: true, avatarUrls: {}, expiresInSeconds: PROFILE_PICTURE_SIGNED_URL_SECONDS });
+
+    const paths = avatarProfiles.map((profile) => profile.avatar_url as string);
+    const { data: signedObjects, error: signedError } = await admin.storage
+      .from(PROFILE_PICTURE_BUCKET)
+      .createSignedUrls(paths, PROFILE_PICTURE_SIGNED_URL_SECONDS);
+    if (signedError) {
+      console.error("Could not sign account profile pictures:", signedError.message);
+      return jsonResponse({ success: false, message: "Profile pictures are unavailable right now." }, 503);
+    }
+    const avatarUrls: Record<string, string> = {};
+    for (const signedObject of signedObjects || []) {
+      if (!signedObject.path || !signedObject.signedUrl) continue;
+      const profile = avatarProfiles.find((candidate) => candidate.avatar_url === signedObject.path);
+      if (profile) avatarUrls[profile.id] = signedObject.signedUrl;
+    }
+    return jsonResponse({ success: true, avatarUrls, expiresInSeconds: PROFILE_PICTURE_SIGNED_URL_SECONDS });
   }
   if (targetUserId === authenticated.user.id) {
     return jsonResponse({ success: false, message: "Use My Account to change your own password. The main administrator account cannot be suspended here." }, 400);
