@@ -38,6 +38,16 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+
+/* Match the requested desktop app scale without changing browser zoom or shrinking mobile UI. */
+@media (min-width: 1024px) {
+  html { zoom: 0.8; }
+  body, #root, #root > div, #root > main { min-height: 125vh; }
+}
+@media (max-width: 1023px) {
+  html { zoom: 1; }
+  body, #root, #root > div, #root > main { min-height: 100vh; }
+}
 h1, h2, h3, h4, h5, h6 { font-family: var(--font-headings); }
 code, pre, kbd, .font-mono { font-family: var(--font-codes); }
 button, input, select, textarea { font: inherit; }
@@ -247,6 +257,8 @@ svg { flex-shrink: 0; }
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 @media print {
+  html { zoom: 1 !important; }
+  body, #root, #root > div, #root > main { min-height: 100% !important; }
   body * { visibility: hidden; }
   #printable-section, #printable-section * { visibility: visible; }
   #printable-section { position: absolute; inset: 0; width: 100%; padding: 20px; background: #fff; color: #000; }

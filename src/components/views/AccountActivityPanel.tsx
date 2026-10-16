@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Clock3, RefreshCw, ShieldCheck, UserRound, Wifi } from 'lucide-react';
 import { useLibrary } from '../../context/LibraryContext';
 import { getSupabase } from '../../utils/supabaseClient';
+import { UserAvatar } from '../common/UserAvatar';
 
 type RecentAccountSession = {
   session_id: string;
@@ -56,13 +57,15 @@ const SessionState: React.FC<{ session: RecentAccountSession }> = ({ session }) 
 };
 
 export const AccountActivityPanel: React.FC = () => {
-  const { currentUser, addToast, isSupabaseConfigured } = useLibrary();
+  const { currentUser, addToast, isSupabaseConfigured, getAccountAvatarUrls } = useLibrary();
   const [onlineSessions, setOnlineSessions] = useState<RecentAccountSession[]>([]);
   const [recentSessions, setRecentSessions] = useState<RecentAccountSession[]>([]);
+  const [accountAvatarUrls, setAccountAvatarUrls] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const isSuperAdmin = currentUser.role === 'super_admin';
+  const accountIdsKey = [...new Set([...onlineSessions, ...recentSessions].map((session) => session.user_id).filter(Boolean))].sort().join(',');
 
   const loadActivity = useCallback(async (showSpinner: boolean) => {
     const supabase = getSupabase();
@@ -99,6 +102,27 @@ export const AccountActivityPanel: React.FC = () => {
     const interval = window.setInterval(() => void loadActivity(false), 30_000);
     return () => window.clearInterval(interval);
   }, [loadActivity]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isSuperAdmin || !isSupabaseConfigured || !accountIdsKey) {
+      setAccountAvatarUrls({});
+      return;
+    }
+    const userIds = accountIdsKey.split(',');
+    const refresh = async () => {
+      const urls = await getAccountAvatarUrls(userIds);
+      if (!cancelled) setAccountAvatarUrls(urls);
+    };
+    void refresh();
+    const interval = window.setInterval(() => void refresh(), 10 * 60 * 1000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [accountIdsKey, getAccountAvatarUrls, isSuperAdmin, isSupabaseConfigured]);
 
   const visibleOnlineSessions = onlineSessions.filter((session) =>
     session.is_online && session.session_status === 'active' && session.account_status === 'active'
@@ -153,7 +177,14 @@ export const AccountActivityPanel: React.FC = () => {
                 {visibleOnlineSessions.map((session) => (
                   <article key={session.session_id} className="flex flex-col gap-2 border border-emerald-700/25 bg-library-bg p-3.5 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
-                      <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-library-muted" />
+                      <UserAvatar
+                        accountId={session.user_id}
+                        accountName={session.user_name || 'Library account'}
+                        avatarPath={session.user_id === currentUser.id ? currentUser.avatar : undefined}
+                        signedUrl={accountAvatarUrls[session.user_id]}
+                        className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-library-border bg-library-bg text-library-muted"
+                        fallback={<UserRound className="h-4 w-4" />}
+                      />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-library-main">{session.user_name || 'Library account'}</p>
                         <p className="mt-0.5 truncate text-xs text-library-muted">{session.user_email || 'No email on profile'} · {session.role.replace(/_/g, ' ')}</p>
@@ -180,7 +211,14 @@ export const AccountActivityPanel: React.FC = () => {
                 {recentSessions.map((session) => (
                   <article key={session.session_id} className="flex flex-col gap-2 border border-library-border bg-library-bg p-3.5 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
-                      <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-library-muted" />
+                      <UserAvatar
+                        accountId={session.user_id}
+                        accountName={session.user_name || 'Library account'}
+                        avatarPath={session.user_id === currentUser.id ? currentUser.avatar : undefined}
+                        signedUrl={accountAvatarUrls[session.user_id]}
+                        className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-library-border bg-library-bg text-library-muted"
+                        fallback={<UserRound className="h-4 w-4" />}
+                      />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-library-main">{session.user_name || 'Library account'}</p>
                         <p className="mt-0.5 truncate text-xs text-library-muted">{session.user_email || 'No email on profile'} · {session.role.replace(/_/g, ' ')}</p>
