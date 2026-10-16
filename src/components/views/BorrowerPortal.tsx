@@ -272,7 +272,7 @@ const BookGrid: React.FC<{ books: Book[]; onSelect: (book: Book) => void }> = ({
     {books.map((book) => (
       <button key={book.id} type="button" onClick={() => onSelect(book)} className="group overflow-hidden rounded-2xl border border-[#e7d9c9] bg-white text-left transition hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-[#7d1d39]/10">
         <div className="flex h-40 items-center justify-center bg-[#f2ece4] p-4">
-          {book.coverImage ? <img src={book.coverImage} alt="" className="h-full max-w-full object-contain drop-shadow-md" /> : <BookOpen className="h-12 w-12 text-[#9b7a61]" />}
+          {book.coverImage ? <img src={book.coverImage} alt={`Cover of ${book.title}`} loading="lazy" className="h-full max-w-full object-contain drop-shadow-md" /> : <BookOpen className="h-12 w-12 text-[#9b7a61]" />}
         </div>
         <div className="p-4">
           <p className="text-[10px] font-bold uppercase tracking-wide text-[#8e6a35]">{book.category || 'Library collection'}</p>
@@ -318,7 +318,7 @@ const BookDetailsModal: React.FC<{ book: Book; onClose: () => void }> = ({ book,
       <button type="button" onClick={onClose} aria-label="Close book details" className="absolute right-4 top-4 rounded-xl p-2 text-slate-500 hover:bg-slate-100"><X className="h-4 w-4" /></button>
       <div className="flex flex-col gap-5 border-b border-slate-100 pb-6 sm:flex-row">
         <div className="flex h-56 w-full shrink-0 items-center justify-center rounded-2xl bg-[#f2ece4] p-4 sm:h-64 sm:w-48">
-          {book.coverImage ? <img src={book.coverImage} alt="" className="h-full max-w-full object-contain" /> : <BookOpen className="h-12 w-12 text-[#9b7a61]" />}
+          {book.coverImage ? <img src={book.coverImage} alt={`Cover of ${book.title}`} className="h-full max-w-full object-contain" /> : <BookOpen className="h-12 w-12 text-[#9b7a61]" />}
         </div>
         <div className="min-w-0 pt-2 sm:pr-8">
           <p className="text-[10px] font-bold uppercase tracking-wide text-[#8e6a35]">{book.category || 'Library collection'}</p>

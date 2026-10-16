@@ -106,29 +106,35 @@ export const BookDetailsView: React.FC<BookDetailsViewProps> = ({ onBack, onEdit
       <div className="bg-white dark:bg-[#14171F] border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-xs grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left: Book Cover Plate & Quick Actions (4 cols) */}
         <div className="lg:col-span-4 flex flex-col items-center">
-          <div className="w-full max-w-[240px] aspect-[3/4] bg-gradient-to-br from-library-surface via-library-border to-library-bg rounded-2xl shadow-xl border border-library-border p-6 flex flex-col justify-between text-white relative overflow-hidden group">
-            <div className="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 bg-amber-400/10 rounded-full blur-xl" />
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono tracking-wider text-amber-300 bg-black/40 px-2 py-0.5 rounded">
-                  {book.language}
-                </span>
-                <span className="text-[10px] font-mono text-amber-400">RC-{book.publicationYear}</span>
-              </div>
-              <h3 className="font-heading font-extrabold text-base text-white mt-4 line-clamp-3 leading-snug">
-                {book.title}
-              </h3>
-              {book.subtitle && (
-                <p className="text-[11px] text-neutral-300 italic mt-1 line-clamp-2">
-                  {book.subtitle}
-                </p>
-              )}
-            </div>
+          <div className="w-full max-w-[240px] aspect-[3/4] rounded-2xl shadow-xl border border-library-border relative overflow-hidden group">
+            {book.coverImage ? (
+              <img src={book.coverImage} alt={`Cover of ${book.title}`} className="absolute inset-0 h-full w-full bg-white object-contain dark:bg-neutral-900" />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-library-surface via-library-border to-library-bg p-6 flex flex-col justify-between text-white">
+                <div className="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 bg-amber-400/10 rounded-full blur-xl" />
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono tracking-wider text-amber-300 bg-black/40 px-2 py-0.5 rounded">
+                      {book.language}
+                    </span>
+                    <span className="text-[10px] font-mono text-amber-400">RC-{book.publicationYear}</span>
+                  </div>
+                  <h3 className="font-heading font-extrabold text-base text-white mt-4 line-clamp-3 leading-snug">
+                    {book.title}
+                  </h3>
+                  {book.subtitle && (
+                    <p className="text-[11px] text-neutral-300 italic mt-1 line-clamp-2">
+                      {book.subtitle}
+                    </p>
+                  )}
+                </div>
 
-            <div className="border-t border-white/10 pt-3">
-              <p className="text-xs font-semibold text-amber-300 truncate">{book.author}</p>
-              <p className="text-[10px] text-neutral-400 truncate">{book.publisher}</p>
-            </div>
+                <div className="border-t border-white/10 pt-3">
+                  <p className="text-xs font-semibold text-amber-300 truncate">{book.author}</p>
+                  <p className="text-[10px] text-neutral-400 truncate">{book.publisher}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="mt-4 w-full max-w-[240px]">

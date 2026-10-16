@@ -471,8 +471,10 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
                     >
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-11 rounded-md bg-neutral-950 text-neutral-700 flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-xs">
-                            <BookOpen className="w-4 h-4" />
+                          <div className="w-9 h-11 rounded-md bg-neutral-100 flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-xs overflow-hidden">
+                            {book.coverImage
+                              ? <img src={book.coverImage} alt="" loading="lazy" className="h-full w-full object-contain" />
+                              : <BookOpen className="w-4 h-4 text-neutral-500" />}
                           </div>
                           <div>
                             <button
@@ -591,22 +593,29 @@ export const BooksView: React.FC<BooksViewProps> = ({ onAddBook, onEditBook }) =
               >
                 <div>
                   {/* Top Cover Banner */}
-                  <div className="h-32 rounded-xl bg-gradient-to-br from-indigo-700 via-indigo-600 to-cyan-600 text-white p-3 relative overflow-hidden flex flex-col justify-between shadow-inner">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono bg-slate-950/25 text-white/90 px-2 py-0.5 rounded">
-                        {book.language}
-                      </span>
-                      {book.isArchived
-                        ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Archived</span>
-                        : <StatusBadge status={isAvailable ? 'available' : 'borrowed'} size="sm" />}
+                  <div className="h-32 rounded-xl bg-gradient-to-br from-indigo-700 via-indigo-600 to-cyan-600 text-white p-3 relative overflow-hidden flex gap-3 shadow-inner">
+                    <div className={`h-full w-[76px] shrink-0 overflow-hidden rounded-lg flex items-center justify-center ${book.coverImage ? 'border border-white/40 bg-white' : 'bg-slate-950/20'}`}>
+                      {book.coverImage
+                        ? <img src={book.coverImage} alt={`Cover of ${book.title}`} loading="lazy" className="h-full w-full object-contain" />
+                        : <BookOpen className="h-7 w-7 text-white/75" />}
                     </div>
-                    <div>
-                      <span className="text-[9px] font-mono text-white/70 uppercase tracking-widest block">
-                        RAHULA COLLEGE
-                      </span>
-                      <h4 className="text-xs font-bold text-white line-clamp-2 leading-snug">
-                        {book.title}
-                      </h4>
+                    <div className="flex min-w-0 flex-1 flex-col justify-between">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-mono bg-slate-950/25 text-white/90 px-2 py-0.5 rounded truncate">
+                          {book.language}
+                        </span>
+                        {book.isArchived
+                          ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Archived</span>
+                          : <StatusBadge status={isAvailable ? 'available' : 'borrowed'} size="sm" />}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[9px] font-mono text-white/70 uppercase tracking-widest block">
+                          RAHULA COLLEGE
+                        </span>
+                        <h4 className="text-xs font-bold text-white line-clamp-2 leading-snug">
+                          {book.title}
+                        </h4>
+                      </div>
                     </div>
                   </div>
 

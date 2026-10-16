@@ -5,7 +5,7 @@ import { Book } from '../../types';
 import { isValidDdcCode } from '../../utils/ddcCode';
 import { BOOK_COVER_BUCKET, createBookCoverStoragePath, discardUnattachedBookCover, prepareBookCoverUpload, validateBookCoverFile } from '../../utils/bookCovers';
 import { getSupabase } from '../../utils/supabaseClient';
-import { Check, AlertCircle, ImagePlus, Upload, X } from 'lucide-react';
+import { Check, AlertCircle, Camera, ImagePlus, X } from 'lucide-react';
 
 interface AddEditBookModalProps {
   isOpen: boolean;
@@ -372,15 +372,16 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                 <ImagePlus className="h-4 w-4" /> Book cover image <span className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Optional</span>
               </h3>
               <p className="mt-1 max-w-xl text-[10px] leading-4 text-neutral-600">
-                JPEG, PNG, or WebP up to 12 MB and 4096 × 4096 pixels. Covers are resized and compressed to WebP (maximum 120 KiB) before being stored outside the database.
+                On phones, this opens the rear camera; on computers, it opens the file chooser. JPEG, PNG, or WebP up to 12 MB and 4096 × 4096 pixels are resized to WebP (maximum 120 KiB).
               </p>
             </div>
-            <label className={`inline-flex cursor-pointer items-center justify-center gap-2 self-start rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[11px] font-bold text-neutral-800 hover:bg-neutral-100 ${isSaving || !isSupabaseConfigured ? 'cursor-not-allowed opacity-50' : ''}`}>
-              <Upload className="h-3.5 w-3.5" /> {coverFile ? 'Choose another image' : 'Choose image'}
+            <label aria-label="Take a book cover photo or choose an image" className={`inline-flex cursor-pointer items-center justify-center gap-2 self-start rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[11px] font-bold text-neutral-800 hover:bg-neutral-100 ${isSaving || !isSupabaseConfigured ? 'cursor-not-allowed opacity-50' : ''}`}>
+              <Camera className="h-3.5 w-3.5" /> {coverFile ? 'Retake / replace cover' : 'Take cover photo'}
               <input
                 ref={coverInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/*"
+                capture="environment"
                 onChange={handleCoverSelection}
                 disabled={isSaving || !isSupabaseConfigured}
                 className="sr-only"
