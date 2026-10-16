@@ -343,7 +343,7 @@ CREATE POLICY "Users Read Own Pending Staff Request" ON public.profiles FOR SELE
   USING (id = (SELECT auth.uid()) AND role = 'staff' AND status = 'pending');
 CREATE POLICY "Users Update Own Profile" ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users Create Own Basic Profile" ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id AND role IN ('student', 'teacher') AND status = 'active');
-CREATE POLICY "Admin Manage Profiles" ON public.profiles FOR ALL TO authenticated USING (public.is_library_admin()) WITH CHECK (public.is_library_admin());
+CREATE POLICY "Admin Manage Profiles" ON public.profiles FOR ALL TO authenticated USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
 
 DROP POLICY IF EXISTS "Users Read Own Member Record" ON public.members;
 DROP POLICY IF EXISTS "Users Create Own Member Record" ON public.members;
@@ -431,9 +431,22 @@ BEGIN
     RAISE EXCEPTION 'Only a super administrator may update another profile.';
   END IF;
   IF OLD.id = auth.uid()
-     AND (to_jsonb(NEW) - ARRAY['full_name','phone','updated_at'])
-         IS DISTINCT FROM (to_jsonb(OLD) - ARRAY['full_name','phone','updated_at']) THEN
-    RAISE EXCEPTION 'You may update only your own name and phone number.';
+     AND (to_jsonb(NEW) - ARRAY['full_name','phone','updated_at','avatar_url'])
+         IS DISTINCT FROM (to_jsonb(OLD) - ARRAY['full_name','phone','updated_at','avatar_url']) THEN
+    RAISE EXCEPTION 'You may update only your own name, phone number, and profile picture.';
+  END IF;
+  IF NEW.avatar_url IS DISTINCT FROM OLD.avatar_url THEN
+    IF OLD.id IS DISTINCT FROM auth.uid() THEN
+      RAISE EXCEPTION 'Profile pictures may only be changed by their owner.';
+    END IF;
+    IF OLD.status <> 'active'
+       OR OLD.role NOT IN ('super_admin', 'librarian', 'assistant_librarian', 'staff') THEN
+      RAISE EXCEPTION 'Only an active staff account may change its profile picture.';
+    END IF;
+    IF NEW.avatar_url IS NOT NULL
+       AND NEW.avatar_url IS DISTINCT FROM (OLD.id::text || '/profile-picture') THEN
+      RAISE EXCEPTION 'Profile pictures must use the account''s own private storage path.';
+    END IF;
   END IF;
   IF OLD.status = 'pending'
      AND (NEW.role IS DISTINCT FROM OLD.role OR NEW.status IS DISTINCT FROM OLD.status) THEN

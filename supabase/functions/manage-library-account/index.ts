@@ -94,12 +94,12 @@ Deno.serve(async (request: Request) => {
   if (targetError || !target) {
     return jsonResponse({ success: false, message: "The selected account was not found." }, 404);
   }
+  if (target.status === "pending") {
+    return jsonResponse({ success: false, message: "Pending staff requests must be handled through the approval workflow." }, 409);
+  }
 
   if (action === "set_status") {
     const nextStatus = payload.status as "active" | "suspended";
-    if (target.status === "pending") {
-      return jsonResponse({ success: false, message: "Pending staff requests must be handled through the approval workflow." }, 409);
-    }
     if (target.role === "super_admin") {
       return jsonResponse({ success: false, message: "Super administrator accounts are protected from suspension." }, 403);
     }

@@ -100,6 +100,10 @@ export const AccountActivityPanel: React.FC = () => {
     return () => window.clearInterval(interval);
   }, [loadActivity]);
 
+  const visibleOnlineSessions = onlineSessions.filter((session) =>
+    session.is_online && session.session_status === 'active' && session.account_status === 'active'
+  );
+
   return (
     <section className="rounded-xl border border-library-border bg-library-surface p-5 sm:p-6 space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -141,12 +145,12 @@ export const AccountActivityPanel: React.FC = () => {
                 <Wifi className="h-4 w-4" /> Online sign-ins
               </h4>
               <span className="border border-library-border px-2.5 py-1 text-xs text-library-muted">
-                {onlineSessions.length} active sign-in{onlineSessions.length === 1 ? '' : 's'}
+                {visibleOnlineSessions.length} active sign-in{visibleOnlineSessions.length === 1 ? '' : 's'}
               </span>
             </div>
-            {onlineSessions.length ? (
+            {visibleOnlineSessions.length ? (
               <div className="space-y-2">
-                {onlineSessions.map((session) => (
+                {visibleOnlineSessions.map((session) => (
                   <article key={session.session_id} className="flex flex-col gap-2 border border-emerald-700/25 bg-library-bg p-3.5 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
                       <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-library-muted" />
@@ -165,15 +169,14 @@ export const AccountActivityPanel: React.FC = () => {
             )}
           </section>
 
-          <section aria-labelledby="recent-account-signins-heading" className="space-y-3 border-t border-library-border pt-4">
-            <div className="flex items-center justify-between gap-3">
-              <h4 id="recent-account-signins-heading" className="flex items-center gap-2 text-sm font-bold text-library-main">
-                <Clock3 className="h-4 w-4" /> Recent sign-ins
-              </h4>
-              <span className="text-[11px] text-library-muted">Most recent 100</span>
-            </div>
+          <details className="border-t border-library-border pt-4">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-bold text-library-main">
+              <span className="flex items-center gap-2"><Clock3 className="h-4 w-4" /> Recent sign-in history</span>
+              <span className="text-[11px] font-normal text-library-muted">{recentSessions.length} records</span>
+            </summary>
+            <p className="mt-2 text-xs leading-5 text-library-muted">Offline and signed-out sign-ins are kept here for history; they are not part of the online list.</p>
             {recentSessions.length ? (
-              <div className="space-y-2">
+              <div className="mt-3 space-y-2">
                 {recentSessions.map((session) => (
                   <article key={session.session_id} className="flex flex-col gap-2 border border-library-border bg-library-bg p-3.5 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
@@ -189,9 +192,9 @@ export const AccountActivityPanel: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <p className="border border-library-border bg-library-bg p-3 text-xs text-library-muted">No sign-in history has been recorded yet.</p>
+              <p className="mt-3 border border-library-border bg-library-bg p-3 text-xs text-library-muted">No sign-in history has been recorded yet.</p>
             )}
-          </section>
+          </details>
         </>
       )}
 

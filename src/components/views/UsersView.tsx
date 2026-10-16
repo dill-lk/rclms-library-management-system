@@ -69,11 +69,11 @@ export const UsersView: React.FC = () => {
 
   const handleToggleAccountStatus = async (user: UserAccount) => {
     const status = user.status === 'active' ? 'suspended' : 'active';
-    const action = status === 'suspended' ? 'suspend' : 'reactivate';
+    const action = status === 'suspended' ? 'Pause' : 'Reactivate';
     const description = status === 'suspended'
-      ? 'They will be blocked from signing in, and their active library sign-ins will be ended. You can reactivate this account later.'
+      ? 'This pauses access: new sign-ins will be blocked, and active library sign-ins will be ended. You can reactivate this account later.'
       : 'The account will be allowed to sign in again. The user must sign in again; previous sessions will remain ended.';
-    if (!window.confirm(`Are you sure you want to ${action} ${user.email}?\n\n${description}`)) return;
+    if (!window.confirm(`${action} access for ${user.email}?\n\n${description}`)) return;
     setPendingAccountAction(user.id);
     try {
       await updateUserStatus(user.id, status);
@@ -229,7 +229,7 @@ export const UsersView: React.FC = () => {
                     )}
                   </td>
                   <td className="py-3 px-4 text-right">
-                    {isSuperAdmin && u.role !== 'super_admin' && u.status !== 'pending' ? (
+                    {isSuperAdmin && u.id !== currentUser.id && u.status !== 'pending' ? (
                       <div className="flex flex-wrap items-center justify-end gap-2">
                         <button
                           type="button"
@@ -240,19 +240,23 @@ export const UsersView: React.FC = () => {
                         >
                           <KeyRound className="h-3.5 w-3.5" /> Set password
                         </button>
-                        <button
-                          type="button"
-                          disabled={pendingAccountAction === u.id || !isSupabaseConfigured}
-                          onClick={() => void handleToggleAccountStatus(u)}
-                          aria-label={`${u.status === 'active' ? 'Suspend' : 'Reactivate'} ${u.email}`}
-                          className={`inline-flex min-h-8 items-center gap-1.5 border px-2.5 text-[11px] font-semibold disabled:opacity-50 ${u.status === 'active' ? 'border-red-200 text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:text-red-300' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/60 dark:text-emerald-300'}`}
-                        >
-                          {u.status === 'active' ? <Ban className="h-3.5 w-3.5" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                          {u.status === 'active' ? 'Suspend' : 'Reactivate'}
-                        </button>
+                        {u.role !== 'super_admin' ? (
+                          <button
+                            type="button"
+                            disabled={pendingAccountAction === u.id || !isSupabaseConfigured}
+                            onClick={() => void handleToggleAccountStatus(u)}
+                            aria-label={`${u.status === 'active' ? 'Pause access for' : 'Reactivate'} ${u.email}`}
+                            className={`inline-flex min-h-8 items-center gap-1.5 border px-2.5 text-[11px] font-semibold disabled:opacity-50 ${u.status === 'active' ? 'border-red-200 text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:text-red-300' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/60 dark:text-emerald-300'}`}
+                          >
+                            {u.status === 'active' ? <Ban className="h-3.5 w-3.5" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                            {u.status === 'active' ? 'Pause access' : 'Reactivate'}
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-gray-400">Protected account</span>
+                        )}
                       </div>
                     ) : (
-                      <span className="text-[11px] text-gray-400">{isSuperAdmin ? (u.status === 'pending' ? 'Approve request first' : 'Protected account') : 'Super administrator only'}</span>
+                      <span className="text-[11px] text-gray-400">{isSuperAdmin ? (u.id === currentUser.id ? 'Use your own account settings' : 'Approve request first') : 'Super administrator only'}</span>
                     )}
                   </td>
                 </tr>

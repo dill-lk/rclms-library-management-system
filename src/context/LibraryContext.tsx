@@ -98,6 +98,7 @@ interface LibraryContextType {
   addUser: (user: Omit<UserAccount, 'id'>) => void;
   updateUserRole: (userId: string, role: UserAccount['role']) => Promise<{ success: boolean; message: string }>;
   updateOwnProfile: (profileData: { name: string; phone?: string }) => Promise<{ success: boolean; message: string; user?: UserAccount }>;
+  updateOwnAvatar: (avatarPath: string) => Promise<{ success: boolean; message: string; user?: UserAccount }>;
   changeOwnPassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   setAccountPassword: (userId: string, password: string) => Promise<{ success: boolean; message: string }>;
   updateUserStatus: (userId: string, status: 'active' | 'suspended') => Promise<{ success: boolean; message: string }>;
@@ -687,6 +688,40 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
     return { success: true, message: 'Profile updated.', user: updatedUser };
   };
 
+  const updateOwnAvatar = async (avatarPath: string): Promise<{ success: boolean; message: string; user?: UserAccount }> => {
+    const fail = (message: string) => {
+      addToast({ type: 'error', title: 'Profile picture was not saved', message });
+      return { success: false, message };
+    };
+    const supabase = getSupabase();
+    const staffRoles: UserRole[] = ['super_admin', 'librarian', 'assistant_librarian', 'staff'];
+    if (!supabase || !isSupabaseConfigured) return fail('The secure profile service is unavailable. Try again when connected.');
+    if (!currentUser.id || currentUser.id.startsWith('usr-') || currentUser.status !== 'active' || !staffRoles.includes(currentUser.role)) {
+      return fail('Only an active staff account can change its own profile picture.');
+    }
+    if (avatarPath !== `${currentUser.id}/profile-picture`) {
+      return fail('The profile picture path does not belong to your account.');
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarPath })
+        .eq('id', currentUser.id)
+        .select('id, avatar_url')
+        .maybeSingle();
+      if (error || !data) return fail(error?.message || 'Your profile picture could not be saved.');
+
+      const updatedUser: UserAccount = { ...currentUser, avatar: data.avatar_url || undefined };
+      setCurrentUser(updatedUser);
+      setUsers((previous) => previous.map((user) => user.id === updatedUser.id ? { ...user, avatar: updatedUser.avatar } : user));
+      addToast({ type: 'success', title: 'Profile picture saved', message: 'Your private profile picture is now updated.' });
+      return { success: true, message: 'Profile picture saved.', user: updatedUser };
+    } catch (error: any) {
+      return fail(error?.message || 'Your profile picture could not be saved. Try again.');
+    }
+  };
+
   const changeOwnPassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
     const supabase = getSupabase();
     const fail = (message: string) => {
@@ -814,6 +849,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
             email: cleanEmail,
             role,
             designation: profile?.department || defaultDesignations[role],
+            avatar: profile?.avatar_url || undefined,
             admissionNo: profile?.admission_no,
             grade: profile?.grade,
             phone: profile?.phone,
@@ -2618,6 +2654,7 @@ export const LibraryProvider: React.FC<{ children: ReactNode }> = ({ children })
         setAccountPassword,
         updateUserStatus,
         updateOwnProfile,
+        updateOwnAvatar,
         changeOwnPassword,
         isLoggedIn,
         login,
